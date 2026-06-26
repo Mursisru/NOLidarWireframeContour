@@ -1,0 +1,24 @@
+{
+  "id": "com.at747.lidarwireframecontour",
+  "guid": "b2c3d4e5-f6a7-8901-bcde-f12345678902",
+  "version": "0.1.0",
+  "name": "Lidar Wireframe Contour",
+  "assembly": "NOLoader.LidarWireframeContour.dll",
+  "entryType": "NOLoader.LidarWireframeContour.LidarWireframeMod",
+  "loadStage": "Mission",
+  "dependencies": [],
+  "patches": [
+    {
+      "target": "FlightHud::Awake",
+      "inject": "NOLoader.LidarWireframeContour.Patches::AwakePostfix",
+      "method": "Postfix",
+      "expectedSignatureHash": "F7DC83C67DE889CB"
+    },
+    {
+      "target": "FlightHud::SetAircraft",
+      "inject": "NOLoader.LidarWireframeContour.Patches::SetAircraftPostfix",
+      "method": "Postfix",
+      "expectedSignatureHash": "61D4B08113CE3DBB"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+*.user
+Directory.Build.user.props
+UnityBundleBuilder/Library/
+UnityBundleBuilder/Logs/
+UnityBundleBuilder/Temp/
+UnityBundleBuilder/BuiltBundles/
+UnityBundleBuilder/build-bundle.log
+UnityBundleBuilder/build-bundle-tail.log
+deploy/
+debug-*.log
