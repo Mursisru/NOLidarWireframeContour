@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
 [![Game](https://img.shields.io/badge/game-Nuclear%20Option-darkgreen.svg)](https://store.steampowered.com/app/2168680/Nuclear_Option/)
-[![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/at747/NOLoader_Engine)
+[![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader_Engine)
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
 
 Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/): active lidar terrain wireframe with a forward-looking collision cone (ACT Phase 2 visual system).
