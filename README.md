@@ -11,7 +11,7 @@ Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/
 
 - **5 Hz CPU probe** — dual-stage `Physics.SphereCast` along **velocity** (wind drift aware), not nose direction
 - **TTI activation** — wireframe appears when time-to-impact &lt; 7 s
-- **GPU post-process** — Laplacian edge detection on depth buffer, impact band, forward cone mask
+- **GPU post-process** — Laplacian edge detection, CRT scanlines + time noise, smooth cone vignette, distance fade
 - **Zero `Update()`** on probe path — `INOModTickNormal` + 200 ms accumulator
 - **CPU fade** — `_EffectBlend` driven on CPU (not shader time)
 - **URP mitigations** — manual `_InvViewProjMatrix`, optional pinned depth texture
@@ -62,6 +62,13 @@ Edit `mod_config.ini` in the mod folder:
 | `MinSpeedMps` | `30` | Min speed for lidar |
 | `SafeAglMeters` | `500` | Sleep above this AGL |
 | `LidarColorHex` | `#00FF66` | Wireframe tint |
+| `EdgeThreshold` | `0.18` | Laplacian edge threshold (meters, depth-scaled) |
+| `EdgeStrength` | `1.8` | Edge intensity multiplier |
+| `EdgeThinPow` | `3.4` | Line thinning exponent |
+| `EdgeTexelScale` | `0.65` | Depth sample stride (lower = thinner lines) |
+| `NoiseStrength` | `0.15` | CRT flicker strength (mode 0) |
+| `DistanceFadeMeters` | `175` | Soft fade before max lidar range |
+| `ConeFalloffCos` | `0.04` | Smooth cone edge width (cosine space) |
 | `DebugForceBlend` | `0` | Force `blend=1` (isolation test) |
 | `DebugShaderMode` | `0` | See debug ladder below |
 | `OutputCameraName` | *(empty)* | Composite camera override (default: Main Camera) |
@@ -88,7 +95,7 @@ INOModTickNormal
 LidarPostProcess
   └─ beginCameraRendering  → depth capture + backbuffer composite
 Shader bundle lidar_shaders
-  └─ Laplacian contours + terrain / impact / cone masks (mode 0 combat)
+  └─ Laplacian contours + impact/cone masks + CRT HUD (mode 0)
 ```
 
 ## Related projects

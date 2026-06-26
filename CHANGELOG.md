@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [0.1.0] — 2026-06-26
 
+### Added (DEV1P37VA)
+
+- CRT HUD polish: animated scanlines + time-based micro-noise (`ApplyHudIntensity`, mode 0 only)
+- Smooth cone vignette via `smoothstep` + `ConeFalloffCos` (replaces hard linear cutoff)
+- Radial distance fade: last `DistanceFadeMeters` before `_MaxLidarDistance`
+- Thinner Laplacian lines: `EdgeTexelScale` uniform; defaults `EdgeThreshold=0.18`, `EdgeStrength=1.8`, `EdgeThinPow=3.4`
+
 ### Fixed (DEV1P36VM)
 
 - Mode 0 anti-fill: Laplacian + upper-cap + slope wash + soft NMS (replaces Sobel far-boost)

@@ -3,9 +3,10 @@ Shader "Hidden/ACT/LidarDepthEdge"
     Properties
     {
         _MainTex ("Depth", 2D) = "white" {}
-        _EdgeThreshold ("Edge Threshold", Float) = 0.24
-        _EdgeStrength ("Edge Strength", Float) = 2.8
-        _EdgeThinPow ("Edge Thin Pow", Float) = 3.0
+        _EdgeThreshold ("Edge Threshold", Float) = 0.18
+        _EdgeStrength ("Edge Strength", Float) = 1.8
+        _EdgeThinPow ("Edge Thin Pow", Float) = 3.4
+        _EdgeTexelScale ("Edge Texel Scale", Float) = 0.65
     }
     SubShader
     {
@@ -23,6 +24,7 @@ Shader "Hidden/ACT/LidarDepthEdge"
             float _EdgeThreshold;
             float _EdgeStrength;
             float _EdgeThinPow;
+            float _EdgeTexelScale;
 
             struct Attributes
             {
@@ -53,11 +55,12 @@ Shader "Hidden/ACT/LidarDepthEdge"
 
             float ContourEdge(float2 uv, float2 texel)
             {
+                float2 t = texel * max(_EdgeTexelScale, 0.25);
                 float dC = LinearDepthAt(uv);
-                float dL = LinearDepthAt(uv - float2(texel.x, 0.0));
-                float dR = LinearDepthAt(uv + float2(texel.x, 0.0));
-                float dU = LinearDepthAt(uv + float2(0.0, texel.y));
-                float dD = LinearDepthAt(uv - float2(0.0, texel.y));
+                float dL = LinearDepthAt(uv - float2(t.x, 0.0));
+                float dR = LinearDepthAt(uv + float2(t.x, 0.0));
+                float dU = LinearDepthAt(uv + float2(0.0, t.y));
+                float dD = LinearDepthAt(uv - float2(0.0, t.y));
 
                 float lap = abs(4.0 * dC - dL - dR - dU - dD);
                 float depthRef = max(dC, 40.0);
@@ -72,16 +75,16 @@ Shader "Hidden/ACT/LidarDepthEdge"
                 float slopeWash = smoothstep(0.0012, 0.028, rampSum);
                 lapEdge *= 1.0 - slopeWash * 0.92;
 
-                float lapL = abs(4.0 * dL - LinearDepthAt(uv - float2(texel.x * 2.0, 0.0)) - dC - LinearDepthAt(uv - float2(texel.x, texel.y)) - LinearDepthAt(uv - float2(texel.x, -texel.y)));
-                float lapR = abs(4.0 * dR - dC - LinearDepthAt(uv + float2(texel.x * 2.0, 0.0)) - LinearDepthAt(uv + float2(texel.x, texel.y)) - LinearDepthAt(uv + float2(texel.x, -texel.y)));
-                float lapU = abs(4.0 * dU - LinearDepthAt(uv + float2(0.0, texel.y * 2.0)) - dC - LinearDepthAt(uv + float2(texel.x, texel.y)) - LinearDepthAt(uv - float2(texel.x, texel.y)));
-                float lapD = abs(4.0 * dD - dC - LinearDepthAt(uv - float2(0.0, texel.y * 2.0)) - LinearDepthAt(uv - float2(texel.x, -texel.y)) - LinearDepthAt(uv + float2(texel.x, -texel.y)));
+                float lapL = abs(4.0 * dL - LinearDepthAt(uv - float2(t.x * 2.0, 0.0)) - dC - LinearDepthAt(uv - float2(t.x, t.y)) - LinearDepthAt(uv - float2(t.x, -t.y)));
+                float lapR = abs(4.0 * dR - dC - LinearDepthAt(uv + float2(t.x * 2.0, 0.0)) - LinearDepthAt(uv + float2(t.x, t.y)) - LinearDepthAt(uv + float2(t.x, -t.y)));
+                float lapU = abs(4.0 * dU - LinearDepthAt(uv + float2(0.0, t.y * 2.0)) - dC - LinearDepthAt(uv + float2(t.x, t.y)) - LinearDepthAt(uv - float2(t.x, t.y)));
+                float lapD = abs(4.0 * dD - dC - LinearDepthAt(uv - float2(0.0, t.y * 2.0)) - LinearDepthAt(uv - float2(t.x, -t.y)) - LinearDepthAt(uv + float2(t.x, -t.y)));
                 float nms = step(lap, lapL) * step(lap, lapR) * step(lap, lapU) * step(lap, lapD);
                 lapEdge *= lerp(0.4, 1.0, nms);
 
                 if (depthRef > 220.0)
                 {
-                    float2 t2 = texel * 2.0;
+                    float2 t2 = t * 2.0;
                     float dL2 = LinearDepthAt(uv - float2(t2.x, 0.0));
                     float dR2 = LinearDepthAt(uv + float2(t2.x, 0.0));
                     float dU2 = LinearDepthAt(uv + float2(0.0, t2.y));

@@ -20,16 +20,16 @@ ACT Phase 2 standalone: Lidar Wireframe Contour (NOLoader mod).
 
 ## Version
 
-0.1.0 Build DEV1P36VM
+0.1.0 Build DEV1P37VA
 
 ## Project specifics
 
 - Runtime requires `NOLoader.LidarWireframeContour.dll` + `NOLidarWireframeContour_Data/lidar_shaders` (loose Shaders/ NOT used; hash in `shader_source_hash.txt`)
 - build-shader-bundle.ps1 syncs Data/Shaders → UnityBundleBuilder before Unity build
 - Composite: backbuffer fullscreen (FullScreenPass pattern), not swap-blip only
-- Edge: Laplacian + NMS in `ContourEdge()` (P36); no Sobel far-boost
-- Mode 0 combat: impact depth band + cone (floor 0.55) + noise; mode 3 = terrain edge debug без cone
-- Debug: mode 6 = edge mask only; mode 5 = solid green sanity
+- Edge: Laplacian + NMS + `EdgeTexelScale` (P37 thin lines)
+- Mode 0 combat: impact band + smooth cone (`ConeFalloffCos`) + CRT scanlines/noise + `DistanceFadeMeters`
+- Mode 3 = terrain edge debug without HUD effects
 
 ## Session 2026-06-26 (P28–P31)
 

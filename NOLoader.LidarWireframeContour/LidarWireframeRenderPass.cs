@@ -23,7 +23,10 @@ namespace NOLoader.LidarWireframeContour
         private static readonly int IdEdgeThreshold = Shader.PropertyToID("_EdgeThreshold");
         private static readonly int IdEdgeStrength = Shader.PropertyToID("_EdgeStrength");
         private static readonly int IdEdgeThinPow = Shader.PropertyToID("_EdgeThinPow");
+        private static readonly int IdEdgeTexelScale = Shader.PropertyToID("_EdgeTexelScale");
         private static readonly int IdNoiseStrength = Shader.PropertyToID("_NoiseStrength");
+        private static readonly int IdDistanceFadeMeters = Shader.PropertyToID("_DistanceFadeMeters");
+        private static readonly int IdConeFalloffWidth = Shader.PropertyToID("_ConeFalloffWidth");
         private static readonly int IdTtiActivateSec = Shader.PropertyToID("_TtiActivateSec");
         private static readonly int IdDebugBypass = Shader.PropertyToID("_DebugBypass");
         private static readonly int IdDebugShaderMode = Shader.PropertyToID("_DebugShaderMode");
@@ -121,7 +124,10 @@ namespace NOLoader.LidarWireframeContour
             _material.SetFloat(IdEdgeThreshold, LidarConfig.EdgeThreshold);
             _material.SetFloat(IdEdgeStrength, LidarConfig.EdgeStrength);
             _material.SetFloat(IdEdgeThinPow, LidarConfig.EdgeThinPow);
+            _material.SetFloat(IdEdgeTexelScale, LidarConfig.EdgeTexelScale);
             _material.SetFloat(IdNoiseStrength, LidarConfig.NoiseStrength);
+            _material.SetFloat(IdDistanceFadeMeters, LidarConfig.DistanceFadeMeters);
+            _material.SetFloat(IdConeFalloffWidth, LidarConfig.ConeFalloffCos);
             _material.SetFloat(IdTtiActivateSec, LidarConfig.TtiActivateSec);
             _material.SetFloat(IdDebugBypass, debugBypass ? 1f : 0f);
             _material.SetFloat(IdDebugShaderMode, LidarConfig.DebugShaderMode);

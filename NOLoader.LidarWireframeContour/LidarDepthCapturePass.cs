@@ -22,6 +22,7 @@ namespace NOLoader.LidarWireframeContour
         private static readonly int IdEdgeThreshold = Shader.PropertyToID("_EdgeThreshold");
         private static readonly int IdEdgeStrength = Shader.PropertyToID("_EdgeStrength");
         private static readonly int IdEdgeThinPow = Shader.PropertyToID("_EdgeThinPow");
+        private static readonly int IdEdgeTexelScale = Shader.PropertyToID("_EdgeTexelScale");
 
         internal LidarDepthCapturePass()
         {
@@ -205,6 +206,7 @@ namespace NOLoader.LidarWireframeContour
                     _edgeMaterial.SetFloat(IdEdgeThreshold, LidarConfig.EdgeThreshold);
                     _edgeMaterial.SetFloat(IdEdgeStrength, LidarConfig.EdgeStrength);
                     _edgeMaterial.SetFloat(IdEdgeThinPow, LidarConfig.EdgeThinPow);
+                    _edgeMaterial.SetFloat(IdEdgeTexelScale, LidarConfig.EdgeTexelScale);
                     CoreUtils.SetRenderTarget(cmd, _edgeMask);
                     CoreUtils.DrawFullScreen(cmd, _edgeMaterial, shaderPassId: 0);
                     _lastEdgePassOk = true;
