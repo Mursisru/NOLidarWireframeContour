@@ -20,7 +20,9 @@ ACT Phase 2 standalone: Lidar Wireframe Contour (NOLoader mod).
 
 ## Version
 
-0.1.0 Build DEV1P39VM
+0.2.1V — reglement: `MAJOR.MINOR.PATCH` + suffix (this mod: V=visual only). Numeric `0.2.0` in mod.json/assembly only.
+
+Legacy DEV channel (P28–P40) retired; see CHANGELOG `[0.1.0]`.
 
 ## Project specifics
 
@@ -28,7 +30,7 @@ ACT Phase 2 standalone: Lidar Wireframe Contour (NOLoader mod).
 - build-shader-bundle.ps1 syncs Data/Shaders → UnityBundleBuilder before Unity build
 - Composite: backbuffer fullscreen (FullScreenPass pattern), not swap-blip only
 - Edge: Laplacian + hard NMS + flat-kill + `EdgeTexelScale` (P38 razor lines)
-- Mode 0 combat: velocity cone only (no impact band) + CRT + `HudBrightness` + `DistanceFadeMeters`
+- Mode 0 combat: velocity cone + CRT + boot strobe (`AppearBootSec`) + `HudBrightness`
 - No `ImpactDepthMask` in mode 0 (probe jitter caused horizontal bands)
 - Mode 3 = terrain edge debug without HUD effects
 

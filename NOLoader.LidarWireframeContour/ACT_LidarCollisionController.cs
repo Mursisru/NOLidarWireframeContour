@@ -13,7 +13,10 @@ namespace NOLoader.LidarWireframeContour
         private const float MinObstacleDistanceM = 12f;
         private const float ProbeNearTtiMarginSec = 3f;
 
+        private float _appearBootElapsed = -1f;
+
         private bool _wantsActive;
+        private bool _wasCombatActive;
         private bool _wasShowing;
         private bool _hasProbeTrack;
         private float _effectBlend;
@@ -47,6 +50,7 @@ namespace NOLoader.LidarWireframeContour
         internal void OnAircraftSet(Aircraft? aircraft)
         {
             ResetProbeState();
+            LidarPostProcess.PushAppearBoot(-1f);
             LidarPostProcess.PushBlend(0f);
             LidarPostProcess.SetShaderActive(false);
         }
@@ -80,6 +84,17 @@ namespace NOLoader.LidarWireframeContour
                 UpdateApproachEstimate(dt, rb);
 
             bool shouldShow = _wantsActive || _holdTimer > 0f;
+            bool booting = _appearBootElapsed >= 0f && _appearBootElapsed < LidarConfig.AppearBootSec;
+
+            if (_wantsActive && !_wasCombatActive)
+                _appearBootElapsed = 0f;
+
+            if (!shouldShow)
+                _appearBootElapsed = -1f;
+            else if (booting)
+                _appearBootElapsed += dt;
+
+            LidarPostProcess.PushAppearBoot(_appearBootElapsed);
 
             if (shouldShow)
             {
@@ -96,7 +111,10 @@ namespace NOLoader.LidarWireframeContour
                 : 1f / Mathf.Max(0.05f, LidarConfig.FadeOutSec);
 
             float target = shouldShow ? 1f : 0f;
-            _effectBlend = Mathf.MoveTowards(_effectBlend, target, fadeSpeed * dt);
+            if (booting)
+                _effectBlend = 1f;
+            else
+                _effectBlend = Mathf.MoveTowards(_effectBlend, target, fadeSpeed * dt);
 
             LidarPostProcess.PushBlend(_effectBlend);
             LidarPostProcess.SetCombatActive(shouldShow);
@@ -105,6 +123,7 @@ namespace NOLoader.LidarWireframeContour
                 LidarPostProcess.SetShaderActive(false);
 
             _wasShowing = shouldShow;
+            _wasCombatActive = _wantsActive;
         }
 
         internal void ProbeTick()
@@ -286,11 +305,13 @@ namespace NOLoader.LidarWireframeContour
         private void ResetProbeState()
         {
             _wantsActive = false;
+            _wasCombatActive = false;
             _wasShowing = false;
             _hasProbeTrack = false;
             _effectBlend = 0f;
             _holdTimer = 0f;
             _missStreak = 0;
+            _appearBootElapsed = -1f;
             _targetTti = 99f;
             _targetDist = 0f;
             _targetLidarDir = Vector3.forward;
@@ -386,6 +407,7 @@ namespace NOLoader.LidarWireframeContour
         private void ResetEffect()
         {
             ResetProbeState();
+            LidarPostProcess.PushAppearBoot(-1f);
             LidarPostProcess.PushBlend(0f);
             LidarPostProcess.SetShaderActive(false);
         }

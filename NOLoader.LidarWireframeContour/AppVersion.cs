@@ -1,16 +1,14 @@
 namespace NOLoader.LidarWireframeContour
-
 {
-
     public static class AppVersion
-
     {
+        /// <summary>Numeric semver only — mod.json, assembly, loaders.</summary>
+        public const string Semver = "0.2.1";
 
-        public const string Semver = "0.1.0";
+        /// <summary>Type suffix: V=visual.</summary>
+        public const string Suffix = "V";
 
-        public const string DisplayVersion = "0.1.0 Build DEV1P39VM";
-
+        /// <summary>Full display string for logs, CHANGELOG, UI.</summary>
+        public const string DisplayVersion = Semver + Suffix;
     }
-
 }
-

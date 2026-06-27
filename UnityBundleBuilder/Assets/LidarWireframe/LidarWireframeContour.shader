@@ -22,6 +22,11 @@ Shader "Hidden/ACT/LidarWireframeContour"
         _DistanceFadeMeters ("Distance Fade Meters", Float) = 175
         _ConeFalloffWidth ("Cone Falloff Width", Float) = 0.05
         _HudBrightness ("HUD Brightness", Range(0, 1)) = 0.62
+        _AppearBootElapsed ("Appear Boot Elapsed", Float) = -1
+        _AppearBootSec ("Appear Boot Sec", Float) = 0.5
+        _AppearBootFreqStart ("Appear Boot Freq Start", Float) = 6
+        _AppearBootFreqEnd ("Appear Boot Freq End", Float) = 40
+        _AppearBootDim ("Appear Boot Dim", Range(0, 1)) = 0
         _TtiActivateSec ("TTI Activate Sec", Float) = 7
         _DebugBypass ("Debug Bypass", Float) = 0
         _DebugShaderMode ("Debug Shader Mode", Float) = 0
@@ -64,6 +69,11 @@ Shader "Hidden/ACT/LidarWireframeContour"
             float _DistanceFadeMeters;
             float _ConeFalloffWidth;
             float _HudBrightness;
+            float _AppearBootElapsed;
+            float _AppearBootSec;
+            float _AppearBootFreqStart;
+            float _AppearBootFreqEnd;
+            float _AppearBootDim;
             float _TtiActivateSec;
             float _DebugBypass;
             float _DebugShaderMode;
@@ -206,6 +216,36 @@ Shader "Hidden/ACT/LidarWireframeContour"
                 return intensity * scanline * noiseFactor;
             }
 
+            bool BootActive()
+            {
+                return _AppearBootElapsed >= 0.0 && _AppearBootElapsed < _AppearBootSec;
+            }
+
+            float BootContourVisibility()
+            {
+                if (!BootActive())
+                    return 1.0;
+
+                float tau = _AppearBootElapsed;
+                float bootSec = max(_AppearBootSec, 0.05);
+                float ramp = smoothstep(0.0, 1.0, tau / bootSec);
+                float f0 = max(_AppearBootFreqStart, 1.0);
+                float f1 = max(_AppearBootFreqEnd, f0 + 1.0);
+                float cycles = tau * f0 + 0.5 * (f1 - f0) * tau * tau / bootSec;
+                float on = step(0.5, frac(cycles));
+                float strobe = lerp(_AppearBootDim, 1.0, on);
+                return ramp * strobe;
+            }
+
+            float BootBrightnessMul()
+            {
+                if (!BootActive())
+                    return 1.0;
+
+                float bootSec = max(_AppearBootSec, 0.05);
+                return smoothstep(0.0, 1.0, _AppearBootElapsed / bootSec);
+            }
+
             float DistanceFade(float linearDepth)
             {
                 float fadeM = max(_DistanceFadeMeters, 1.0);
@@ -267,8 +307,9 @@ Shader "Hidden/ACT/LidarWireframeContour"
                 float contourCombat = terrainEdge * cone;
                 contourCombat = ApplyHudIntensity(uv, contourCombat);
                 contourCombat *= DistanceFade(linearDepth);
-                contourCombat *= _EffectBlend;
-                fixed3 lidarRgb = _LidarColor.rgb * _HudBrightness;
+                float visibility = BootActive() ? BootContourVisibility() : _EffectBlend;
+                contourCombat *= visibility;
+                fixed3 lidarRgb = _LidarColor.rgb * _HudBrightness * BootBrightnessMul();
                 fixed3 outRgb = lerp(scene.rgb, lidarRgb, contourCombat * _LidarColor.a);
                 return fixed4(outRgb, 1.0);
             }

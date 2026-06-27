@@ -19,6 +19,7 @@ namespace NOLoader.LidarWireframeContour
         private static readonly HashSet<int> s_enqueuedCamerasThisFrame = new HashSet<int>();
 
         private static float _effectBlend;
+        private static float _appearBootElapsed = -1f;
         private static float _impactDistance;
         private static float _timeToImpact = 99f;
         private static Vector3 _lidarDirection = Vector3.forward;
@@ -146,6 +147,11 @@ namespace NOLoader.LidarWireframeContour
             // #endregion
         }
 
+        internal static void PushAppearBoot(float elapsedSec)
+        {
+            _appearBootElapsed = elapsedSec;
+        }
+
         internal static void PushBlend(float blend)
         {
             float prev = _effectBlend;
@@ -191,6 +197,7 @@ namespace NOLoader.LidarWireframeContour
                 ImpactDistance = _impactDistance,
                 TimeToImpact = _timeToImpact,
                 LidarDirection = _lidarDirection,
+                AppearBootElapsed = _appearBootElapsed,
             };
         }
 

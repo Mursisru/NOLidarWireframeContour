@@ -8,7 +8,7 @@ namespace NOLoader.LidarWireframeContour
     {
         internal static bool Enabled = true;
         internal static float ProbeIntervalSec = 0.2f;
-        internal static float ProbeIntervalNearSec = 0.05f;
+        internal static float ProbeIntervalNearSec = 1f / 30f;
         internal static float TtiActivateSec = 7f;
         internal static float FadeOutSec = 0.3f;
         internal static float FadeInSec = 0.3f;
@@ -38,6 +38,10 @@ namespace NOLoader.LidarWireframeContour
         internal static float DistanceFadeMeters = 175f;
         internal static float ConeFalloffCos = 0.05f;
         internal static float HudBrightness = 0.62f;
+        internal static float AppearBootSec = 0.5f;
+        internal static float AppearBootFreqStart = 6f;
+        internal static float AppearBootFreqEnd = 40f;
+        internal static float AppearBootDim = 0f;
 
         internal static float ConeCosHalfAngle =>
             Mathf.Cos(ConeHalfAngleDeg * Mathf.Deg2Rad);
@@ -51,7 +55,7 @@ namespace NOLoader.LidarWireframeContour
             const string defaults = @"[Lidar]
 Enabled=true
 ProbeIntervalSec=0.2
-ProbeIntervalNearSec=0.05
+ProbeIntervalNearSec=0.033333
 TtiActivateSec=7.0
 FadeOutSec=0.3
 FadeInSec=0.3
@@ -81,6 +85,10 @@ NoiseStrength=0.15
 DistanceFadeMeters=175
 ConeFalloffCos=0.05
 HudBrightness=0.62
+AppearBootSec=0.5
+AppearBootFreqStart=6
+AppearBootFreqEnd=40
+AppearBootDim=0
 ";
 
             if (ensureDefault)
@@ -90,7 +98,7 @@ HudBrightness=0.62
 
             Enabled = cfg.GetBool("Lidar", "Enabled", true);
             ProbeIntervalSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "ProbeIntervalSec", 0.2f));
-            ProbeIntervalNearSec = Mathf.Clamp(cfg.GetFloat("Lidar", "ProbeIntervalNearSec", 0.05f), 0.02f, ProbeIntervalSec);
+            ProbeIntervalNearSec = Mathf.Clamp(cfg.GetFloat("Lidar", "ProbeIntervalNearSec", 1f / 30f), 0.02f, ProbeIntervalSec);
             TtiActivateSec = Mathf.Max(0.5f, cfg.GetFloat("Lidar", "TtiActivateSec", 7f));
             FadeOutSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeOutSec", 0.3f));
             FadeInSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeInSec", 0.3f));
@@ -118,6 +126,10 @@ HudBrightness=0.62
             DistanceFadeMeters = Mathf.Max(50f, cfg.GetFloat("Lidar", "DistanceFadeMeters", 175f));
             ConeFalloffCos = Mathf.Clamp(cfg.GetFloat("Lidar", "ConeFalloffCos", 0.05f), 0.005f, 0.2f);
             HudBrightness = Mathf.Clamp(cfg.GetFloat("Lidar", "HudBrightness", 0.62f), 0.1f, 1f);
+            AppearBootSec = Mathf.Clamp(cfg.GetFloat("Lidar", "AppearBootSec", 0.5f), 0.1f, 2f);
+            AppearBootFreqStart = Mathf.Clamp(cfg.GetFloat("Lidar", "AppearBootFreqStart", 4f), 1f, 40f);
+            AppearBootFreqEnd = Mathf.Clamp(cfg.GetFloat("Lidar", "AppearBootFreqEnd", 32f), AppearBootFreqStart + 1f, 80f);
+            AppearBootDim = Mathf.Clamp01(cfg.GetFloat("Lidar", "AppearBootDim", 0.06f));
 
             string colorHex = cfg.GetString("Lidar", "LidarColorHex", "#00CC66");
             if (!ColorUtility.TryParseHtmlString(colorHex, out Color parsed))

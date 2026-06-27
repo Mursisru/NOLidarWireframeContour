@@ -1,8 +1,8 @@
 # Lidar Wireframe Contour
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.1V-blue.svg)](CHANGELOG.md)
 [![Game](https://img.shields.io/badge/game-Nuclear%20Option-darkgreen.svg)](https://store.steampowered.com/app/2168680/Nuclear_Option/)
-[![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader_Engine)
+[![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader)
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
 
 Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/): active lidar terrain wireframe with a forward-looking collision cone (ACT Phase 2 visual system).
@@ -11,7 +11,7 @@ Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/
 
 - **5 Hz CPU probe** — dual-stage `Physics.SphereCast` along **velocity** (wind drift aware), not nose direction
 - **TTI activation** — wireframe appears when time-to-impact &lt; 7 s
-- **GPU post-process** — Laplacian edge (hard NMS, anti-flat), velocity cone, dim tactical green HUD, CRT scanlines
+- **GPU post-process** — Laplacian edge, velocity cone, tactical green HUD, CRT scanlines, 0.5s boot strobe on appear
 - **Zero `Update()`** on probe path — `INOModTickNormal` + 200 ms accumulator
 - **CPU fade** — `_EffectBlend` driven on CPU (not shader time)
 - **URP mitigations** — manual `_InvViewProjMatrix`, optional pinned depth texture
@@ -19,7 +19,7 @@ Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/
 ## Requirements
 
 - Nuclear Option (Steam)
-- [NOLoader](https://github.com/at747/NOLoader_Engine) installed and deployed
+- [NOLoader](https://github.com/Mursisru/NOLoader) installed and deployed
 - .NET Framework 4.8 SDK (build only)
 
 ## Install (players)
@@ -46,6 +46,15 @@ Close the game before deploy.
 
 Requires Unity 2022.3 LTS. Output: `NOLidarWireframeContour_Data\lidar_shaders`.
 
+### Versioning
+
+| Context | Format | Example |
+|---------|--------|---------|
+| `mod.json`, assembly | numeric semver only | `0.2.0` |
+| Logs, `DisplayVersion`, CHANGELOG | semver + type suffix | `0.2.0V` |
+
+Suffix letters: **V** visual, **M** mechanic, **P** program, **A** audio, **Q** QoL, **O** other. `A+V→Q`; `Q+M` forbidden.
+
 ## Configuration
 
 Edit `mod_config.ini` in the mod folder:
@@ -54,7 +63,7 @@ Edit `mod_config.ini` in the mod folder:
 |-----|---------|-------------|
 | `Enabled` | `true` | Master switch |
 | `ProbeIntervalSec` | `0.2` | SphereCast interval (cruise) |
-| `ProbeIntervalNearSec` | `0.05` | Faster probe when TTI ≤ 10s or combat |
+| `ProbeIntervalNearSec` | `0.033` | Faster probe at 30 Hz when TTI ≤ 10s or combat |
 | `TtiActivateSec` | `7.0` | Activate below this TTI |
 | `FadeOutSec` | `0.3` | CPU fade-out duration |
 | `FadeInSec` | `0.3` | CPU fade-in duration |
@@ -74,6 +83,10 @@ Edit `mod_config.ini` in the mod folder:
 | `DistanceFadeMeters` | `175` | Soft fade before max lidar range |
 | `ConeFalloffCos` | `0.05` | Smooth cone edge width (cosine space) |
 | `HudBrightness` | `0.62` | Tactical HUD dim multiplier (mode 0) |
+| `AppearBootSec` | `0.5` | Boot strobe duration on HUD appear |
+| `AppearBootFreqStart` | `4` | Initial blink frequency (Hz, normalized) |
+| `AppearBootFreqEnd` | `32` | Final blink frequency at end of boot |
+| `AppearBootDim` | `0.06` | Minimum brightness during boot off-phase |
 | `DebugForceBlend` | `0` | Force `blend=1` (isolation test) |
 | `DebugShaderMode` | `0` | See debug ladder below |
 | `OutputCameraName` | *(empty)* | Composite camera override (default: Main Camera) |
@@ -110,8 +123,8 @@ Shader bundle lidar_shaders
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 at747
+[MIT](LICENSE) — Copyright (c) 2026 [Mursisru](https://github.com/Mursisru)
 
 ## Author
 
-**at747** — Nuclear Option modding
+**[Mursisru](https://github.com/Mursisru)** — Nuclear Option modding

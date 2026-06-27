@@ -2,7 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.1.0] — 2026-06-26
+## [0.2.1V] — 2026-06-26
+
+### Fixed
+
+- TTI boot strobe: triggers on `_wantsActive` rising edge only; strobe drives contour visibility (not drowned by fade-in)
+- Boot uses elapsed seconds for accelerating blink; brightness ramps to `HudBrightness`
+- Near-combat probe rate raised to 30 Hz (`ProbeIntervalNearSec` ≈ 0.033)
+
+## [0.2.0V] — 2026-06-26
+
+### Changed
+
+- Versioning migrated to reglement format `MAJOR.MINOR.PATCH` + type suffix (`0.2.0V`)
+- Numeric-only `0.2.0` in `mod.json` / assembly; full `0.2.0V` in logs and `DisplayVersion`
+- Replaces legacy `Build DEV1Px` strings
+
+## [0.1.0] — 2026-06-26 (legacy DEV builds)
+
+### Added (DEV1P40V)
+
+- HUD boot sequence: 0.5s accelerating strobe + brightness ramp to `HudBrightness` on each appear
+- Config: `AppearBootSec`, `AppearBootFreqStart`, `AppearBootFreqEnd`, `AppearBootDim`
+
+### Changed (DEV1P40V)
+
+- Authorship and assembly metadata aligned with [Mursisru](https://github.com/Mursisru) GitHub org
+- `mod.json` id → `com.mursisru.lidarwireframecontour`
 
 ### Added (DEV1P39VM)
 

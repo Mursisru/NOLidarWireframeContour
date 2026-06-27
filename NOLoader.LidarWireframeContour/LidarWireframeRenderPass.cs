@@ -27,6 +27,11 @@ namespace NOLoader.LidarWireframeContour
         private static readonly int IdDistanceFadeMeters = Shader.PropertyToID("_DistanceFadeMeters");
         private static readonly int IdConeFalloffWidth = Shader.PropertyToID("_ConeFalloffWidth");
         private static readonly int IdHudBrightness = Shader.PropertyToID("_HudBrightness");
+        private static readonly int IdAppearBootElapsed = Shader.PropertyToID("_AppearBootElapsed");
+        private static readonly int IdAppearBootSec = Shader.PropertyToID("_AppearBootSec");
+        private static readonly int IdAppearBootFreqStart = Shader.PropertyToID("_AppearBootFreqStart");
+        private static readonly int IdAppearBootFreqEnd = Shader.PropertyToID("_AppearBootFreqEnd");
+        private static readonly int IdAppearBootDim = Shader.PropertyToID("_AppearBootDim");
         private static readonly int IdTtiActivateSec = Shader.PropertyToID("_TtiActivateSec");
         private static readonly int IdDebugBypass = Shader.PropertyToID("_DebugBypass");
         private static readonly int IdDebugShaderMode = Shader.PropertyToID("_DebugShaderMode");
@@ -129,6 +134,11 @@ namespace NOLoader.LidarWireframeContour
             _material.SetFloat(IdDistanceFadeMeters, LidarConfig.DistanceFadeMeters);
             _material.SetFloat(IdConeFalloffWidth, LidarConfig.ConeFalloffCos);
             _material.SetFloat(IdHudBrightness, LidarConfig.HudBrightness);
+            _material.SetFloat(IdAppearBootElapsed, uniforms.AppearBootElapsed);
+            _material.SetFloat(IdAppearBootSec, LidarConfig.AppearBootSec);
+            _material.SetFloat(IdAppearBootFreqStart, LidarConfig.AppearBootFreqStart);
+            _material.SetFloat(IdAppearBootFreqEnd, LidarConfig.AppearBootFreqEnd);
+            _material.SetFloat(IdAppearBootDim, LidarConfig.AppearBootDim);
             _material.SetFloat(IdTtiActivateSec, LidarConfig.TtiActivateSec);
             _material.SetFloat(IdDebugBypass, debugBypass ? 1f : 0f);
             _material.SetFloat(IdDebugShaderMode, LidarConfig.DebugShaderMode);
@@ -305,5 +315,6 @@ namespace NOLoader.LidarWireframeContour
         internal float ImpactDistance;
         internal float TimeToImpact;
         internal Vector3 LidarDirection;
+        internal float AppearBootElapsed;
     }
 }
