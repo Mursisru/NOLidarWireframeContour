@@ -25,14 +25,22 @@ namespace NOLoader.LidarWireframeContour
             ctrl.OnAircraftSet(aircraft);
         }
 
+        internal static bool _controllerEnsured;
+
         internal static void EnsureController()
         {
+            if (_controllerEnsured && ACT_LidarCollisionController.Instance != null)
+                return;
+
             FlightHud? fh = SceneSingleton<FlightHud>.i;
             if (fh == null)
                 return;
 
             if (fh.GetComponent<ACT_LidarCollisionController>() == null)
                 fh.gameObject.AddComponent<ACT_LidarCollisionController>();
+
+            if (ACT_LidarCollisionController.Instance != null)
+                _controllerEnsured = true;
         }
     }
 }

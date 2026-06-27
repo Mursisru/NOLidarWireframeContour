@@ -10,15 +10,12 @@ namespace NOLoader.LidarWireframeContour
     {
         private const string BundleFileName = "lidar_shaders";
         private const string ShaderAssetName = "LidarWireframeContour.shader";
-        private const string PackShaderAssetName = "LidarDepthPack.shader";
         private const string EdgeShaderAssetName = "LidarDepthEdge.shader";
         private const string MaterialAssetName = "LidarWireframeContour.mat";
         private const string ShaderName = "Hidden/ACT/LidarWireframeContour";
-        private const string PackShaderName = "Hidden/ACT/LidarDepthPack";
         private const string EdgeShaderName = "Hidden/ACT/LidarDepthEdge";
 
         private static Shader? _compositeShader;
-        private static Shader? _packShader;
         private static Shader? _edgeShader;
         private static AssetBundle? _shaderBundle;
         private static bool _loadAttempted;
@@ -31,16 +28,6 @@ namespace NOLoader.LidarWireframeContour
                 if (!_loadAttempted)
                     TryLoad();
                 return _compositeShader;
-            }
-        }
-
-        internal static Shader? PackShader
-        {
-            get
-            {
-                if (!_loadAttempted)
-                    TryLoad();
-                return _packShader;
             }
         }
 
@@ -59,8 +46,6 @@ namespace NOLoader.LidarWireframeContour
         internal static string? LoadedBundlePath { get; private set; }
 
         internal static long LoadedBundleBytes { get; private set; }
-
-        internal static bool HasPackShader => PackShader != null;
 
         internal static bool HasEdgeShader => EdgeShader != null;
 
@@ -110,10 +95,9 @@ namespace NOLoader.LidarWireframeContour
         {
             _loadAttempted = true;
 
-            if (TryLoadFromBundle(out Shader? bundled, out Shader? pack, out Shader? edge, out string? bundlePath) && bundled != null)
+            if (TryLoadFromBundle(out Shader? bundled, out Shader? edge, out string? bundlePath) && bundled != null)
             {
                 _compositeShader = bundled;
-                _packShader = pack ?? Shader.Find(PackShaderName);
                 _edgeShader = edge ?? Shader.Find(EdgeShaderName);
                 LoadedBundlePath = bundlePath;
                 if (!string.IsNullOrEmpty(bundlePath) && File.Exists(bundlePath))
@@ -122,23 +106,20 @@ namespace NOLoader.LidarWireframeContour
                     "[LidarWireframe] Shader loaded from bundle (" + bundlePath +
                     ", bytes=" + LoadedBundleBytes +
                     ", composite=" + (bundled != null) +
-                    ", pack=" + (_packShader != null) +
                     ", edge=" + (_edgeShader != null) +
                     ", supported=" + bundled!.isSupported + ").");
                 return;
             }
 
             _compositeShader = Shader.Find(ShaderName);
-            _packShader = Shader.Find(PackShaderName);
             _edgeShader = Shader.Find(EdgeShaderName);
             if (_compositeShader != null)
                 Debug.Log("[LidarWireframe] Shader found via Shader.Find (supported=" + _compositeShader.isSupported + ").");
         }
 
-        private static bool TryLoadFromBundle(out Shader? shader, out Shader? packShader, out Shader? edgeShader, out string? loadedPath)
+        private static bool TryLoadFromBundle(out Shader? shader, out Shader? edgeShader, out string? loadedPath)
         {
             shader = null;
-            packShader = null;
             edgeShader = null;
             loadedPath = null;
 
@@ -183,10 +164,6 @@ namespace NOLoader.LidarWireframeContour
                             if (shader == null)
                                 shader = bundle.LoadAsset<Shader>("LidarWireframeContour");
                         }
-
-                        packShader = bundle.LoadAsset<Shader>(PackShaderAssetName);
-                        if (packShader == null)
-                            packShader = bundle.LoadAsset<Shader>("LidarDepthPack");
 
                         edgeShader = bundle.LoadAsset<Shader>(EdgeShaderAssetName);
                         if (edgeShader == null)

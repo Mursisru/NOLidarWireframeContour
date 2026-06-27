@@ -8,7 +8,10 @@ Shader "Hidden/ACT/LidarWireframeContour"
         _ImpactDistance ("Impact Distance", Float) = 500
         _TimeToImpact ("Time To Impact", Float) = 7
         _LidarDirView ("Lidar Direction View", Vector) = (0, 0, 1, 0)
-        _EffectBlend ("Effect Blend", Range(0, 1)) = 0
+        _CombatStartTime ("Combat Start Time", Float) = -1
+        _CombatEndTime ("Combat End Time", Float) = -1
+        _FadeInSec ("Fade In Sec", Float) = 0.3
+        _FadeOutSec ("Fade Out Sec", Float) = 0.3
         _ConeCosHalfAngle ("Cone Cos Half Angle", Float) = 0.999
         _LidarColor ("Lidar Color", Color) = (0, 1, 0.4, 1)
         _DepthClipMargin ("Depth Clip Margin", Float) = 5
@@ -22,7 +25,6 @@ Shader "Hidden/ACT/LidarWireframeContour"
         _DistanceFadeMeters ("Distance Fade Meters", Float) = 175
         _ConeFalloffWidth ("Cone Falloff Width", Float) = 0.05
         _HudBrightness ("HUD Brightness", Range(0, 1)) = 0.62
-        _AppearBootElapsed ("Appear Boot Elapsed", Float) = -1
         _AppearBootSec ("Appear Boot Sec", Float) = 0.5
         _AppearBootFreqStart ("Appear Boot Freq Start", Float) = 6
         _AppearBootFreqEnd ("Appear Boot Freq End", Float) = 40
@@ -55,7 +57,10 @@ Shader "Hidden/ACT/LidarWireframeContour"
             float _ImpactDistance;
             float _TimeToImpact;
             float4 _LidarDirView;
-            float _EffectBlend;
+            float _CombatStartTime;
+            float _CombatEndTime;
+            float _FadeInSec;
+            float _FadeOutSec;
             float _ConeCosHalfAngle;
             fixed4 _LidarColor;
             float _DepthClipMargin;
@@ -69,7 +74,6 @@ Shader "Hidden/ACT/LidarWireframeContour"
             float _DistanceFadeMeters;
             float _ConeFalloffWidth;
             float _HudBrightness;
-            float _AppearBootElapsed;
             float _AppearBootSec;
             float _AppearBootFreqStart;
             float _AppearBootFreqEnd;
@@ -210,40 +214,35 @@ Shader "Hidden/ACT/LidarWireframeContour"
 
             float ApplyHudIntensity(float2 uv, float intensity)
             {
-                float scanline = sin(uv.y * _ScreenParams.y * 1.5) * 0.09 + 0.91;
-                float noise = frac(sin(dot(uv + _Time.x, float2(12.9898, 78.233))) * 43758.5453);
-                float noiseFactor = lerp(1.0, 0.85 + noise * 0.15, _NoiseStrength);
-                return intensity * scanline * noiseFactor;
+                float scanline = sin(uv.y * _ScreenParams.y * 1.5) * 0.03 + 0.97;
+                return intensity * scanline;
             }
 
-            bool BootActive()
+            float CombatElapsed()
             {
-                return _AppearBootElapsed >= 0.0 && _AppearBootElapsed < _AppearBootSec;
+                if (_CombatStartTime < 0.0)
+                    return -1.0;
+                return _Time.y - _CombatStartTime;
             }
 
-            float BootContourVisibility()
+            float FadeOutMul()
             {
-                if (!BootActive())
+                if (_CombatEndTime < 0.0)
                     return 1.0;
 
-                float tau = _AppearBootElapsed;
-                float bootSec = max(_AppearBootSec, 0.05);
-                float ramp = smoothstep(0.0, 1.0, tau / bootSec);
-                float f0 = max(_AppearBootFreqStart, 1.0);
-                float f1 = max(_AppearBootFreqEnd, f0 + 1.0);
-                float cycles = tau * f0 + 0.5 * (f1 - f0) * tau * tau / bootSec;
-                float on = step(0.5, frac(cycles));
-                float strobe = lerp(_AppearBootDim, 1.0, on);
-                return ramp * strobe;
+                float t = (_Time.y - _CombatEndTime) / max(_FadeOutSec, 0.05);
+                return 1.0 - saturate(t);
             }
 
-            float BootBrightnessMul()
+            float CombatVisibility()
             {
-                if (!BootActive())
-                    return 1.0;
+                float elapsed = CombatElapsed();
+                if (elapsed < 0.0)
+                    return 0.0;
 
-                float bootSec = max(_AppearBootSec, 0.05);
-                return smoothstep(0.0, 1.0, _AppearBootElapsed / bootSec);
+                float vis = saturate(elapsed / max(_FadeInSec, 0.05));
+                vis *= FadeOutMul();
+                return vis;
             }
 
             float DistanceFade(float linearDepth)
@@ -260,6 +259,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
             fixed4 frag(Varyings input) : SV_Target
             {
                 float2 uv = input.texcoord;
+                float visibility = CombatVisibility();
 
                 if (_DebugShaderMode > 5.5)
                 {
@@ -273,7 +273,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
 
                 fixed4 scene = tex2D(_BlitTexture, uv);
 
-                if (_EffectBlend <= 0.001)
+                if (_CombatStartTime < 0.0 || visibility <= 0.001)
                     return scene;
 
                 float2 texel = float2(_ScreenParams.z - 1.0, _ScreenParams.w - 1.0);
@@ -286,7 +286,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
                     return fixed4(linearDepth / max(_MaxLidarDistance, 1.0), linearDepth / max(_MaxLidarDistance, 1.0), linearDepth / max(_MaxLidarDistance, 1.0), 1.0);
 
                 if (_DebugShaderMode > 2.5)
-                    return fixed4(lerp(scene.rgb, _LidarColor.rgb, terrainEdge * _EffectBlend), 1.0);
+                    return fixed4(lerp(scene.rgb, _LidarColor.rgb, terrainEdge * visibility), 1.0);
 
                 if (_DebugShaderMode > 1.5)
                 {
@@ -296,20 +296,19 @@ Shader "Hidden/ACT/LidarWireframeContour"
 
                 if (_DebugShaderMode > 0.5)
                 {
-                    float contour = terrainEdge * _EffectBlend;
+                    float contour = terrainEdge * visibility;
                     return fixed4(lerp(scene.rgb, _LidarColor.rgb, contour * _LidarColor.a), 1.0);
                 }
 
                 if (_DebugBypass > 0.5)
-                    return fixed4(lerp(scene.rgb, _LidarColor.rgb, terrainEdge * _EffectBlend), 1.0);
+                    return fixed4(lerp(scene.rgb, _LidarColor.rgb, terrainEdge * visibility), 1.0);
 
                 float cone = CombatConeMask(ViewRay(uv));
                 float contourCombat = terrainEdge * cone;
                 contourCombat = ApplyHudIntensity(uv, contourCombat);
                 contourCombat *= DistanceFade(linearDepth);
-                float visibility = BootActive() ? BootContourVisibility() : _EffectBlend;
                 contourCombat *= visibility;
-                fixed3 lidarRgb = _LidarColor.rgb * _HudBrightness * BootBrightnessMul();
+                fixed3 lidarRgb = _LidarColor.rgb * _HudBrightness;
                 fixed3 outRgb = lerp(scene.rgb, lidarRgb, contourCombat * _LidarColor.a);
                 return fixed4(outRgb, 1.0);
             }

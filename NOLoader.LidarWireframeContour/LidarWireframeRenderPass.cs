@@ -13,7 +13,10 @@ namespace NOLoader.LidarWireframeContour
         private static readonly int IdImpactDistance = Shader.PropertyToID("_ImpactDistance");
         private static readonly int IdTimeToImpact = Shader.PropertyToID("_TimeToImpact");
         private static readonly int IdLidarDirView = Shader.PropertyToID("_LidarDirView");
-        private static readonly int IdEffectBlend = Shader.PropertyToID("_EffectBlend");
+        private static readonly int IdCombatStartTime = Shader.PropertyToID("_CombatStartTime");
+        private static readonly int IdCombatEndTime = Shader.PropertyToID("_CombatEndTime");
+        private static readonly int IdFadeInSec = Shader.PropertyToID("_FadeInSec");
+        private static readonly int IdFadeOutSec = Shader.PropertyToID("_FadeOutSec");
         private static readonly int IdConeCosHalfAngle = Shader.PropertyToID("_ConeCosHalfAngle");
         private static readonly int IdLidarColor = Shader.PropertyToID("_LidarColor");
         private static readonly int IdDepthClipMargin = Shader.PropertyToID("_DepthClipMargin");
@@ -27,7 +30,6 @@ namespace NOLoader.LidarWireframeContour
         private static readonly int IdDistanceFadeMeters = Shader.PropertyToID("_DistanceFadeMeters");
         private static readonly int IdConeFalloffWidth = Shader.PropertyToID("_ConeFalloffWidth");
         private static readonly int IdHudBrightness = Shader.PropertyToID("_HudBrightness");
-        private static readonly int IdAppearBootElapsed = Shader.PropertyToID("_AppearBootElapsed");
         private static readonly int IdAppearBootSec = Shader.PropertyToID("_AppearBootSec");
         private static readonly int IdAppearBootFreqStart = Shader.PropertyToID("_AppearBootFreqStart");
         private static readonly int IdAppearBootFreqEnd = Shader.PropertyToID("_AppearBootFreqEnd");
@@ -85,12 +87,16 @@ namespace NOLoader.LidarWireframeContour
             _lastExecuteFrame = frame;
             _lastExecuteCameraId = camId;
 
+            if (!LidarPostProcess.ShouldEnqueueGpuPasses())
+                return;
+
             LidarUniformSnapshot uniforms = LidarPostProcess.GetUniformSnapshot();
-            if (uniforms.EffectBlend <= 0.001f)
+            if (uniforms.CombatStartTime < 0f && LidarConfig.DebugForceBlend <= 0.001f)
                 return;
 
             string depthSource = ResolveDepthTexture(out Texture? depthTex);
-            if (depthTex == null || IsPlaceholderDepth(depthTex))
+            bool hasEdge = LidarPostProcess.DepthCapturePass.TryGetCapturedEdge(out Texture? edgeTex);
+            if ((depthTex == null || IsPlaceholderDepth(depthTex)) && !hasEdge)
             {
                 LidarDebugLog.Write("D", "LidarWireframeRenderPass.Execute", "skip_bad_depth", d =>
                 {
@@ -113,14 +119,16 @@ namespace NOLoader.LidarWireframeContour
             Vector3 coneDirView = ResolveConeDirection(cam, camFwdView, velView);
             float centerConeDot = ComputeCenterConeDot(gpuProj, coneDirView);
             bool debugBypass = LidarConfig.DebugForceBlend > 0.001f;
-            bool hasEdge = LidarPostProcess.DepthCapturePass.TryGetCapturedEdge(out Texture? edgeTex);
 
             _material.SetMatrix(IdInvProj, gpuProj.inverse);
             _material.SetFloat(IdMaxLidarDistance, uniforms.MaxLidarDistance);
             _material.SetFloat(IdImpactDistance, uniforms.ImpactDistance);
             _material.SetFloat(IdTimeToImpact, uniforms.TimeToImpact);
             _material.SetVector(IdLidarDirView, coneDirView);
-            _material.SetFloat(IdEffectBlend, uniforms.EffectBlend);
+            _material.SetFloat(IdCombatStartTime, uniforms.CombatStartTime);
+            _material.SetFloat(IdCombatEndTime, uniforms.CombatEndTime);
+            _material.SetFloat(IdFadeInSec, uniforms.FadeInSec);
+            _material.SetFloat(IdFadeOutSec, uniforms.FadeOutSec);
             _material.SetFloat(IdConeCosHalfAngle, LidarConfig.ConeCosHalfAngle);
             _material.SetColor(IdLidarColor, LidarConfig.LidarColor);
             _material.SetFloat(IdDepthClipMargin, LidarConfig.DepthClipMarginM);
@@ -134,7 +142,6 @@ namespace NOLoader.LidarWireframeContour
             _material.SetFloat(IdDistanceFadeMeters, LidarConfig.DistanceFadeMeters);
             _material.SetFloat(IdConeFalloffWidth, LidarConfig.ConeFalloffCos);
             _material.SetFloat(IdHudBrightness, LidarConfig.HudBrightness);
-            _material.SetFloat(IdAppearBootElapsed, uniforms.AppearBootElapsed);
             _material.SetFloat(IdAppearBootSec, LidarConfig.AppearBootSec);
             _material.SetFloat(IdAppearBootFreqStart, LidarConfig.AppearBootFreqStart);
             _material.SetFloat(IdAppearBootFreqEnd, LidarConfig.AppearBootFreqEnd);
@@ -189,7 +196,6 @@ namespace NOLoader.LidarWireframeContour
                     d.Append(',');
                     d.Append("\"cam\":\"").Append(Escape(cam.name)).Append('\"');
                     d.Append(',');
-
                     d.Append("\"source\":\"").Append(Escape(sourceName)).Append('\"');
                     d.Append(',');
                     d.Append("\"dest\":\"").Append(Escape(destNameLog)).Append('\"');
@@ -200,7 +206,7 @@ namespace NOLoader.LidarWireframeContour
                     d.Append(',');
                     d.Append("\"debugForce\":").Append(LidarConfig.DebugForceBlend.ToString("F3"));
                     d.Append(',');
-                    d.Append("\"blend\":").Append(uniforms.EffectBlend.ToString("F3"));
+                    d.Append("\"combatStart\":").Append(uniforms.CombatStartTime.ToString("F3"));
                     d.Append(',');
                     d.Append("\"depthSource\":\"").Append(depthSource).Append('\"');
                     d.Append(',');
@@ -214,8 +220,6 @@ namespace NOLoader.LidarWireframeContour
                 LidarDebugLog.Write("D", "LidarWireframeRenderPass.Execute", "draw_ok", d =>
                 {
                     d.Append("\"count\":").Append(_executeCount);
-                    d.Append(',');
-                    d.Append("\"blend\":").Append(uniforms.EffectBlend.ToString("F3"));
                     d.Append(',');
                     d.Append("\"shaderMode\":").Append(LidarConfig.DebugShaderMode);
                     d.Append(',');
@@ -269,7 +273,7 @@ namespace NOLoader.LidarWireframeContour
             bool debugBypass,
             bool hasEdge)
         {
-            if (debugBypass || uniforms.EffectBlend <= 0.05f)
+            if (debugBypass || uniforms.CombatStartTime < 0f)
                 return;
             if (Time.unscaledTime - _lastCombatSummaryTime < CombatSummaryIntervalSec)
                 return;
@@ -277,7 +281,7 @@ namespace NOLoader.LidarWireframeContour
             _lastCombatSummaryTime = Time.unscaledTime;
             LidarDebugLog.Write("F", "LidarWireframeRenderPass.Execute", "combat_frame_summary", d =>
             {
-                d.Append("\"blend\":").Append(uniforms.EffectBlend.ToString("F3"));
+                d.Append("\"combatStart\":").Append(uniforms.CombatStartTime.ToString("F3"));
                 d.Append(',');
                 d.Append("\"cam\":\"").Append(Escape(cam.name)).Append('\"');
                 d.Append(',');
@@ -310,11 +314,14 @@ namespace NOLoader.LidarWireframeContour
 
     internal struct LidarUniformSnapshot
     {
-        internal float EffectBlend;
+        internal float CombatStartTime;
+        internal float CombatEndTime;
+        internal bool CombatShowing;
+        internal float FadeInSec;
+        internal float FadeOutSec;
         internal float MaxLidarDistance;
         internal float ImpactDistance;
         internal float TimeToImpact;
         internal Vector3 LidarDirection;
-        internal float AppearBootElapsed;
     }
 }

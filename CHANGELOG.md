@@ -2,6 +2,43 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.6V] — 2026-06-26
+
+### Fixed
+
+- Impulse flicker: removed time-varying CRT noise; static scanlines only
+- Cone teleport: lidar uniforms smoothed and pushed at **render rate** (`VisualUpdate`), softer probe direction blending
+- **1 s escape hold** (`HoldAfterEscapeSec`) when pulling away from collision before fade-out
+
+## [0.2.5V] — 2026-06-26
+
+### Changed
+
+- Edge pass restored to **full-resolution** RT (reverts perf v2 half-res)
+- Removed boot **strobe** blink on appear; smooth fade-in/out only
+
+## [0.2.4V] — 2026-06-26
+
+### Fixed
+
+- Combat visuals broken after perf v2: `requiresDepthTexture` now armed on **Main Camera** before first combat frame (not only via late `BindCamera`)
+- TTI activation opens GPU immediately from probe (`TryBeginCombatVisual`), not after ~10 Hz `FadeTick` delay
+- Depth pre-warm when probe track enters near-TTI margin
+- GPU combat gates stay open through shader fade-out (`_gpuGateActive`)
+
+## [0.2.3V] — 2026-06-26
+
+### Changed
+
+- **Perf architecture v2:** removed ARGB depth pack blit (−1 fullscreen pass per combat frame)
+- **Half-res edge pass @ 60 Hz** — Laplacian edge RT at ½ resolution; bilinear upscale in composite (~4× fewer edge pixels)
+- **Shader-driven fade/boot** — `_CombatStartTime` / `_CombatEndTime` + `_Time.y`; no CPU `_EffectBlend` ramp (~10 Hz micro-stutter removed)
+- `ForceKeepDepthTextureActive` default `false`; `EnsureController` one-shot; skip AGL raycast during active combat track
+
+### Fixed
+
+- GPU gate stays on through shader fade-out after hold expires (`_CombatEndTime`)
+
 ## [0.2.2V] — 2026-06-26
 
 ### Changed

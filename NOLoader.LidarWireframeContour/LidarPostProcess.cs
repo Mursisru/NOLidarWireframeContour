@@ -18,8 +18,11 @@ namespace NOLoader.LidarWireframeContour
         private static int _dedupeFrame = -1;
         private static readonly HashSet<int> s_enqueuedCamerasThisFrame = new HashSet<int>();
 
-        private static float _effectBlend;
-        private static float _appearBootElapsed = -1f;
+        private static float _combatStartTime = -1f;
+        private static float _combatEndTime = -1f;
+        private static float _fadeInSec = 0.3f;
+        private static bool _gpuGateActive;
+        private static bool _combatShowing;
         private static float _impactDistance;
         private static float _timeToImpact = 99f;
         private static Vector3 _lidarDirection = Vector3.forward;
@@ -27,16 +30,13 @@ namespace NOLoader.LidarWireframeContour
         private static string? _modRoot;
         private static float _lastLoggedDebugForce = -1f;
         private static int _lastLoggedShaderMode = -1;
-        private static bool _combatActive;
+        private static bool _mainDepthRequired;
         private static float _lastCameraDiscoveryLog = -999f;
 
-        internal static float EffectBlend => _effectBlend;
-        internal static bool CombatActive => _combatActive;
+        internal static bool CombatShowing => _combatShowing;
         internal static string? ModRoot => _modRoot;
         internal static string LastEnqueueReject => _lastEnqueueReject;
         internal static LidarDepthCapturePass DepthCapturePass => s_depthPass;
-
-        internal static void SetCombatActive(bool active) => _combatActive = active;
 
         internal static void SetModRoot(string modRoot)
         {
@@ -63,7 +63,6 @@ namespace NOLoader.LidarWireframeContour
             _lastLoggedDebugForce = LidarConfig.DebugForceBlend;
             _lastLoggedShaderMode = LidarConfig.DebugShaderMode;
 
-            // #region agent log
             LidarDebugLog.Write("H1", "LidarPostProcess.TryReloadConfig", "config_reloaded", d =>
             {
                 d.Append("\"modRoot\":\"").Append(EscapeDbg(_modRoot!)).Append('\"');
@@ -76,7 +75,6 @@ namespace NOLoader.LidarWireframeContour
                 d.Append(',');
                 d.Append("\"outputCamera\":\"").Append(EscapeDbg(LidarConfig.OutputCameraName)).Append('\"');
             });
-            // #endregion
         }
 
         internal static void EnsurePipelineHook()
@@ -92,7 +90,7 @@ namespace NOLoader.LidarWireframeContour
             RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
 
             if (LidarConfig.ForceKeepDepthTextureActive)
-                TryBindMainCameraDepth();
+                EnsureMainCameraDepth(true);
         }
 
         private static void TryBindMainCameraDepth()
@@ -102,7 +100,7 @@ namespace NOLoader.LidarWireframeContour
                 return;
 
             _boundCamera = csm.mainCamera;
-            ApplyDepthPolicy(true);
+            EnsureMainCameraDepth(true);
         }
 
         internal static void Shutdown()
@@ -138,64 +136,108 @@ namespace NOLoader.LidarWireframeContour
             _lidarDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
         }
 
-        internal static void PushAppearBoot(float elapsedSec)
+        internal static void ArmMainCameraDepth()
         {
-            if (Mathf.Abs(_appearBootElapsed - elapsedSec) < 0.0001f)
-                return;
-
-            _appearBootElapsed = elapsedSec;
+            EnsureMainCameraDepth(true);
         }
 
-        internal static void PushBlend(float blend)
+        internal static void TryBeginCombatVisual(float fadeInSec)
         {
-            blend = Mathf.Clamp01(blend);
-            if (Mathf.Abs(_effectBlend - blend) < 0.0001f)
+            EnsureMainCameraDepth(true);
+            if (_combatStartTime >= 0f && _combatEndTime < 0f)
                 return;
 
-            float prev = _effectBlend;
-            _effectBlend = blend;
-            ApplyDepthPolicy(ShouldKeepDepthActive());
-
-            if (prev > 0.001f && _effectBlend <= 0.001f)
-                ReleaseIdleResources();
-
-            if (Mathf.Abs(prev - _effectBlend) > 0.05f)
-            {
-                // #region agent log
-                LidarDebugLog.Write("B", "LidarPostProcess.PushBlend", "blend_changed", d =>
-                {
-                    d.Append("\"prev\":").Append(prev.ToString("F3"));
-                    d.Append(',');
-                    d.Append("\"blend\":").Append(_effectBlend.ToString("F3"));
-                });
-                // #endregion
-            }
+            PushCombatStart(Time.time, fadeInSec);
+            SetCombatShowing(true);
         }
 
-        internal static void SetShaderActive(bool active)
+        internal static void PushCombatStart(float startTime, float fadeInSec)
         {
+            _combatStartTime = startTime;
+            _combatEndTime = -1f;
+            _fadeInSec = Mathf.Max(0.05f, fadeInSec);
+            _gpuGateActive = true;
+            EnsureMainCameraDepth(true);
+        }
+
+        internal static void PushCombatEnd(float endTime)
+        {
+            _combatEndTime = endTime;
+        }
+
+        internal static void SetCombatShowing(bool showing)
+        {
+            _combatShowing = showing;
+        }
+
+        internal static void SetGpuGate(bool active)
+        {
+            if (_gpuGateActive == active)
+                return;
+
+            _gpuGateActive = active;
+            if (active)
+                EnsureMainCameraDepth(true);
+            else
+                SyncMainCameraDepth();
+
             if (!active)
-            {
-                _effectBlend = 0f;
-                ApplyDepthPolicy(ShouldKeepDepthActive());
                 ReleaseIdleResources();
-            }
+        }
+
+        internal static bool IsFadeOutComplete(float now)
+        {
+            if (_combatEndTime < 0f)
+                return !_gpuGateActive;
+
+            return now >= _combatEndTime + LidarConfig.FadeOutSec + 0.05f;
+        }
+
+        internal static void ClearCombatTimes()
+        {
+            _combatStartTime = -1f;
+            _combatEndTime = -1f;
+            _combatShowing = false;
+        }
+
+        internal static void ResetGpuState()
+        {
+            ClearCombatTimes();
+            SetGpuGate(false);
+        }
+
+        internal static bool ShouldEnqueueGpuPasses()
+        {
+            if (LidarConfig.DebugForceBlend > 0.001f)
+                return true;
+
+            return _gpuGateActive && _combatStartTime >= 0f;
         }
 
         internal static LidarUniformSnapshot GetUniformSnapshot()
         {
-            float blend = _effectBlend;
+            float startTime = _combatStartTime;
+            float endTime = _combatEndTime;
+            float fadeIn = _fadeInSec;
+
             if (LidarConfig.DebugForceBlend > 0.001f)
-                blend = Mathf.Max(blend, LidarConfig.DebugForceBlend);
+            {
+                startTime = Time.time - 10f;
+                endTime = -1f;
+                fadeIn = 0.05f;
+            }
 
             return new LidarUniformSnapshot
             {
-                EffectBlend = blend,
+                CombatStartTime = startTime,
+                CombatEndTime = endTime,
+                CombatShowing = _combatShowing || LidarConfig.DebugForceBlend > 0.001f,
+                FadeInSec = fadeIn,
+                FadeOutSec = LidarConfig.FadeOutSec,
                 MaxLidarDistance = LidarConfig.CastMaxDistanceM,
                 ImpactDistance = _impactDistance,
                 TimeToImpact = _timeToImpact,
                 LidarDirection = _lidarDirection,
-                AppearBootElapsed = _appearBootElapsed,
             };
         }
 
@@ -203,6 +245,9 @@ namespace NOLoader.LidarWireframeContour
         {
             if (!LidarConfig.Enabled)
                 return;
+
+            if (ShouldEnqueueGpuPasses())
+                ACT_LidarCollisionController.Instance?.VisualUpdate(Time.unscaledDeltaTime);
 
             int frame = Time.frameCount;
             if (_dedupeFrame != frame)
@@ -225,15 +270,14 @@ namespace NOLoader.LidarWireframeContour
                 return;
             }
 
-            LidarUniformSnapshot snap = GetUniformSnapshot();
-            if (snap.EffectBlend <= 0.001f)
+            if (!ShouldEnqueueGpuPasses())
             {
                 if (camera.cameraType == CameraType.Game && Time.unscaledTime - _lastRejectLogTime > 2f)
                 {
                     _lastRejectLogTime = Time.unscaledTime;
                     LidarDebugLog.Write("C", "LidarPostProcess.OnBeginCameraRendering", "enqueue_rejected", d =>
                     {
-                        d.Append("\"reason\":\"blend_zero\"");
+                        d.Append("\"reason\":\"gpu_gate_off\"");
                         d.Append(',');
                         d.Append("\"cam\":\"").Append(EscapeDbg(camera.name)).Append('\"');
                     });
@@ -278,8 +322,6 @@ namespace NOLoader.LidarWireframeContour
                     {
                         d.Append("\"reason\":\"").Append(EscapeDbg(reject)).Append('\"');
                         d.Append(',');
-                        d.Append("\"blend\":").Append(_effectBlend.ToString("F3"));
-                        d.Append(',');
                         d.Append("\"cam\":\"").Append(EscapeDbg(camera.name)).Append('\"');
                     });
                 }
@@ -295,20 +337,15 @@ namespace NOLoader.LidarWireframeContour
                 return;
 
             if (isMainCamera)
-            {
                 urp.scriptableRenderer.EnqueuePass(s_depthPass);
-            }
 
             if (isOutputCamera)
             {
                 s_pass.SetMaterial(_material);
                 urp.scriptableRenderer.EnqueuePass(s_pass);
 
-                // #region agent log
                 LidarDebugLog.Write("C", "LidarPostProcess.OnBeginCameraRendering", "pass_enqueued", d =>
                 {
-                    d.Append("\"blend\":").Append(_effectBlend.ToString("F3"));
-                    d.Append(',');
                     d.Append("\"debugForce\":").Append(LidarConfig.DebugForceBlend.ToString("F3"));
                     d.Append(',');
                     d.Append("\"shaderMode\":").Append(LidarConfig.DebugShaderMode);
@@ -317,7 +354,6 @@ namespace NOLoader.LidarWireframeContour
                     d.Append(',');
                     d.Append("\"role\":\"").Append(isMainCamera && isOutputCamera ? "main+output" : isMainCamera ? "depth" : "output").Append('\"');
                 });
-                // #endregion
 
                 if (!_loggedEnqueue)
                 {
@@ -342,7 +378,10 @@ namespace NOLoader.LidarWireframeContour
             if (LidarConfig.DebugForceBlend > 0.001f)
                 return true;
 
-            if (_combatActive && _effectBlend > 0.5f)
+            if (_gpuGateActive)
+                return true;
+
+            if (_combatShowing)
                 return true;
 
             if (!isOutputCamera)
@@ -410,7 +449,7 @@ namespace NOLoader.LidarWireframeContour
             if (_boundCamera != null && camera != _boundCamera)
                 return;
 
-            if (_effectBlend > 0.001f || LidarConfig.DebugForceBlend > 0.001f)
+            if (ShouldEnqueueGpuPasses())
                 return;
 
             ReleaseIdleResources();
@@ -455,13 +494,59 @@ namespace NOLoader.LidarWireframeContour
             if (LidarConfig.DebugForceBlend > 0.001f)
                 return true;
 
-            return _effectBlend > 0.001f;
+            return _gpuGateActive;
+        }
+
+        private static void EnsureMainCameraDepth(bool enabled)
+        {
+            CameraStateManager? csm = SceneSingleton<CameraStateManager>.i;
+            Camera? mainCam = csm != null ? csm.mainCamera : null;
+            if (mainCam == null)
+                return;
+
+            if (enabled)
+            {
+                if (_mainDepthRequired)
+                    return;
+
+                UniversalAdditionalCameraData urp = mainCam.GetUniversalAdditionalCameraData();
+                urp.requiresDepthTexture = true;
+                _mainDepthRequired = true;
+                return;
+            }
+
+            SyncMainCameraDepth();
+        }
+
+        private static void SyncMainCameraDepth()
+        {
+            if (!_mainDepthRequired)
+                return;
+
+            bool wantDepth = ShouldKeepDepthActive();
+            if (wantDepth)
+                return;
+
+            CameraStateManager? csm = SceneSingleton<CameraStateManager>.i;
+            Camera? mainCam = csm != null ? csm.mainCamera : null;
+            if (mainCam == null)
+            {
+                _mainDepthRequired = false;
+                return;
+            }
+
+            UniversalAdditionalCameraData urp = mainCam.GetUniversalAdditionalCameraData();
+            urp.requiresDepthTexture = false;
+            _mainDepthRequired = false;
         }
 
         private static void ApplyDepthPolicy(bool needsDepth)
         {
             if (_boundCamera == null)
                 return;
+
+            if (needsDepth)
+                EnsureMainCameraDepth(true);
 
             bool wantDepth = LidarConfig.ForceKeepDepthTextureActive || needsDepth;
             if (wantDepth == _depthCurrentlyRequired)
@@ -474,14 +559,14 @@ namespace NOLoader.LidarWireframeContour
 
         private static void ReleaseIdleResources()
         {
-            ApplyDepthPolicy(false);
+            SyncMainCameraDepth();
             s_depthPass.Cleanup();
             s_pass.Cleanup();
         }
 
         private static void ReleaseGpuResources()
         {
-            ApplyDepthPolicy(false);
+            SyncMainCameraDepth();
             s_depthPass.Cleanup();
             s_pass.Cleanup();
 
