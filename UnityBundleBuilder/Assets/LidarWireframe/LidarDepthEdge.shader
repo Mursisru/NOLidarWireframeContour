@@ -3,10 +3,10 @@ Shader "Hidden/ACT/LidarDepthEdge"
     Properties
     {
         _MainTex ("Depth", 2D) = "white" {}
-        _EdgeThreshold ("Edge Threshold", Float) = 0.18
-        _EdgeStrength ("Edge Strength", Float) = 1.8
-        _EdgeThinPow ("Edge Thin Pow", Float) = 3.4
-        _EdgeTexelScale ("Edge Texel Scale", Float) = 0.65
+        _EdgeThreshold ("Edge Threshold", Float) = 0.20
+        _EdgeStrength ("Edge Strength", Float) = 1.6
+        _EdgeThinPow ("Edge Thin Pow", Float) = 4.2
+        _EdgeTexelScale ("Edge Texel Scale", Float) = 0.50
     }
     SubShader
     {
@@ -55,7 +55,7 @@ Shader "Hidden/ACT/LidarDepthEdge"
 
             float ContourEdge(float2 uv, float2 texel)
             {
-                float2 t = texel * max(_EdgeTexelScale, 0.25);
+                float2 t = texel * max(_EdgeTexelScale, 0.35);
                 float dC = LinearDepthAt(uv);
                 float dL = LinearDepthAt(uv - float2(t.x, 0.0));
                 float dR = LinearDepthAt(uv + float2(t.x, 0.0));
@@ -67,7 +67,7 @@ Shader "Hidden/ACT/LidarDepthEdge"
                 float lapThresh = _EdgeThreshold * lerp(0.15, 0.75, saturate(depthRef / 1100.0));
 
                 float lapEdge = smoothstep(lapThresh, lapThresh * 1.12, lap);
-                lapEdge *= 1.0 - smoothstep(lapThresh * 2.2, lapThresh * 4.5, lap);
+                lapEdge *= 1.0 - smoothstep(lapThresh * 2.0, lapThresh * 3.8, lap);
 
                 float rampX = abs(dC - 0.5 * (dL + dR));
                 float rampY = abs(dC - 0.5 * (dU + dD));
@@ -75,12 +75,15 @@ Shader "Hidden/ACT/LidarDepthEdge"
                 float slopeWash = smoothstep(0.0012, 0.028, rampSum);
                 lapEdge *= 1.0 - slopeWash * 0.92;
 
+                float flatKill = smoothstep(0.006, 0.0015, rampSum);
+                lapEdge *= flatKill;
+
                 float lapL = abs(4.0 * dL - LinearDepthAt(uv - float2(t.x * 2.0, 0.0)) - dC - LinearDepthAt(uv - float2(t.x, t.y)) - LinearDepthAt(uv - float2(t.x, -t.y)));
                 float lapR = abs(4.0 * dR - dC - LinearDepthAt(uv + float2(t.x * 2.0, 0.0)) - LinearDepthAt(uv + float2(t.x, t.y)) - LinearDepthAt(uv + float2(t.x, -t.y)));
                 float lapU = abs(4.0 * dU - LinearDepthAt(uv + float2(0.0, t.y * 2.0)) - dC - LinearDepthAt(uv + float2(t.x, t.y)) - LinearDepthAt(uv - float2(t.x, t.y)));
                 float lapD = abs(4.0 * dD - dC - LinearDepthAt(uv - float2(0.0, t.y * 2.0)) - LinearDepthAt(uv - float2(t.x, -t.y)) - LinearDepthAt(uv + float2(t.x, -t.y)));
-                float nms = step(lap, lapL) * step(lap, lapR) * step(lap, lapU) * step(lap, lapD);
-                lapEdge *= lerp(0.4, 1.0, nms);
+                float nms = step(lap + 1e-5, lapL) * step(lap + 1e-5, lapR) * step(lap + 1e-5, lapU) * step(lap + 1e-5, lapD);
+                lapEdge *= nms;
 
                 if (depthRef > 220.0)
                 {
@@ -94,6 +97,7 @@ Shader "Hidden/ACT/LidarDepthEdge"
                     lapEdge = max(lapEdge, smoothstep(farThresh, farThresh * 1.15, lap2) * 0.88);
                 }
 
+                lapEdge = smoothstep(0.58, 0.72, lapEdge);
                 return pow(saturate(lapEdge * _EdgeStrength), max(_EdgeThinPow, 1.0));
             }
 

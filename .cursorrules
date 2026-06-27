@@ -7,7 +7,7 @@ ACT Phase 2 standalone: Lidar Wireframe Contour (NOLoader mod).
 ## Architecture
 
 - **Probe:** `LidarSphereCastProbe` — Cast#1/Cast#2 origin offset; `TerrainLayerMask=2112`; min hit 12m
-- **Tick:** `INOModTickNormal` — `FadeTick(dt)` + `ProbeTick` 0.2s (no MonoBehaviour Update)
+- Probe: 5 Hz default, 20 Hz near TTI; per-frame extrapolation + smoothed uniforms (P39)
 - **GPU:** `LidarDepthCapturePass` (AfterRenderingTransparents) + `LidarWireframeRenderPass` (backbuffer FullScreenPass on Main Camera)
 - **Uniforms:** probe/blend on CPU; `_InvViewProjMatrix` only in pass `Execute`
 - **VRAM:** `LidarWireframeRenderPass.Cleanup()` → RTHandle.Release on Shutdown / blend=0 / controller OnDestroy
@@ -20,15 +20,16 @@ ACT Phase 2 standalone: Lidar Wireframe Contour (NOLoader mod).
 
 ## Version
 
-0.1.0 Build DEV1P37VA
+0.1.0 Build DEV1P39VM
 
 ## Project specifics
 
 - Runtime requires `NOLoader.LidarWireframeContour.dll` + `NOLidarWireframeContour_Data/lidar_shaders` (loose Shaders/ NOT used; hash in `shader_source_hash.txt`)
 - build-shader-bundle.ps1 syncs Data/Shaders → UnityBundleBuilder before Unity build
 - Composite: backbuffer fullscreen (FullScreenPass pattern), not swap-blip only
-- Edge: Laplacian + NMS + `EdgeTexelScale` (P37 thin lines)
-- Mode 0 combat: impact band + smooth cone (`ConeFalloffCos`) + CRT scanlines/noise + `DistanceFadeMeters`
+- Edge: Laplacian + hard NMS + flat-kill + `EdgeTexelScale` (P38 razor lines)
+- Mode 0 combat: velocity cone only (no impact band) + CRT + `HudBrightness` + `DistanceFadeMeters`
+- No `ImpactDepthMask` in mode 0 (probe jitter caused horizontal bands)
 - Mode 3 = terrain edge debug without HUD effects
 
 ## Session 2026-06-26 (P28–P31)

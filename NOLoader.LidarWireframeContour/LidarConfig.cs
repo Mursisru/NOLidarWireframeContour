@@ -8,8 +8,12 @@ namespace NOLoader.LidarWireframeContour
     {
         internal static bool Enabled = true;
         internal static float ProbeIntervalSec = 0.2f;
+        internal static float ProbeIntervalNearSec = 0.05f;
         internal static float TtiActivateSec = 7f;
         internal static float FadeOutSec = 0.3f;
+        internal static float FadeInSec = 0.3f;
+        internal static float FadeInUrgentSec = 0.12f;
+        internal static float UniformSmoothSec = 0.2f;
         internal static bool ForceKeepDepthTextureActive;
         internal static float DebugForceBlend;
         internal static int DebugShaderMode;
@@ -26,13 +30,14 @@ namespace NOLoader.LidarWireframeContour
         internal static float ConeHalfAngleDeg = 15f;
         internal static Color LidarColor = new Color(0f, 1f, 0.4f, 1f);
         internal static int TerrainLayerMask;
-        internal static float EdgeThreshold = 0.18f;
-        internal static float EdgeStrength = 1.8f;
-        internal static float EdgeThinPow = 3.4f;
-        internal static float EdgeTexelScale = 0.65f;
+        internal static float EdgeThreshold = 0.20f;
+        internal static float EdgeStrength = 1.6f;
+        internal static float EdgeThinPow = 4.2f;
+        internal static float EdgeTexelScale = 0.50f;
         internal static float NoiseStrength = 0.15f;
         internal static float DistanceFadeMeters = 175f;
-        internal static float ConeFalloffCos = 0.04f;
+        internal static float ConeFalloffCos = 0.05f;
+        internal static float HudBrightness = 0.62f;
 
         internal static float ConeCosHalfAngle =>
             Mathf.Cos(ConeHalfAngleDeg * Mathf.Deg2Rad);
@@ -46,8 +51,12 @@ namespace NOLoader.LidarWireframeContour
             const string defaults = @"[Lidar]
 Enabled=true
 ProbeIntervalSec=0.2
+ProbeIntervalNearSec=0.05
 TtiActivateSec=7.0
 FadeOutSec=0.3
+FadeInSec=0.3
+FadeInUrgentSec=0.12
+UniformSmoothSec=0.2
 ForceKeepDepthTextureActive=true
 DebugForceBlend=0
 DebugShaderMode=0
@@ -62,15 +71,16 @@ DepthClipMarginM=5
 NearClipM=80
 ImpactBandHalfM=200
 ConeHalfAngleDeg=15
-LidarColorHex=#00FF66
+LidarColorHex=#00CC66
 TerrainLayerMask=2112
-EdgeThreshold=0.18
-EdgeStrength=1.8
-EdgeThinPow=3.4
-EdgeTexelScale=0.65
+EdgeThreshold=0.20
+EdgeStrength=1.6
+EdgeThinPow=4.2
+EdgeTexelScale=0.50
 NoiseStrength=0.15
 DistanceFadeMeters=175
-ConeFalloffCos=0.04
+ConeFalloffCos=0.05
+HudBrightness=0.62
 ";
 
             if (ensureDefault)
@@ -80,8 +90,12 @@ ConeFalloffCos=0.04
 
             Enabled = cfg.GetBool("Lidar", "Enabled", true);
             ProbeIntervalSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "ProbeIntervalSec", 0.2f));
+            ProbeIntervalNearSec = Mathf.Clamp(cfg.GetFloat("Lidar", "ProbeIntervalNearSec", 0.05f), 0.02f, ProbeIntervalSec);
             TtiActivateSec = Mathf.Max(0.5f, cfg.GetFloat("Lidar", "TtiActivateSec", 7f));
             FadeOutSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeOutSec", 0.3f));
+            FadeInSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeInSec", 0.3f));
+            FadeInUrgentSec = Mathf.Clamp(cfg.GetFloat("Lidar", "FadeInUrgentSec", 0.12f), 0.03f, FadeInSec);
+            UniformSmoothSec = Mathf.Clamp(cfg.GetFloat("Lidar", "UniformSmoothSec", 0.2f), 0.05f, 1f);
             ForceKeepDepthTextureActive = cfg.GetBool("Lidar", "ForceKeepDepthTextureActive", false);
             DebugForceBlend = Mathf.Clamp01(cfg.GetFloat("Lidar", "DebugForceBlend", 0f));
             DebugShaderMode = Mathf.Clamp(cfg.GetInt("Lidar", "DebugShaderMode", 0), 0, 6);
@@ -96,15 +110,16 @@ ConeFalloffCos=0.04
             NearClipM = Mathf.Max(10f, cfg.GetFloat("Lidar", "NearClipM", 80f));
             ImpactBandHalfM = Mathf.Max(20f, cfg.GetFloat("Lidar", "ImpactBandHalfM", 120f));
             ConeHalfAngleDeg = Mathf.Clamp(cfg.GetFloat("Lidar", "ConeHalfAngleDeg", 15f), 0.5f, 25f);
-            EdgeThreshold = Mathf.Max(0.01f, cfg.GetFloat("Lidar", "EdgeThreshold", 0.18f));
-            EdgeStrength = Mathf.Max(0f, cfg.GetFloat("Lidar", "EdgeStrength", 1.8f));
-            EdgeThinPow = Mathf.Clamp(cfg.GetFloat("Lidar", "EdgeThinPow", 3.4f), 1f, 8f);
-            EdgeTexelScale = Mathf.Clamp(cfg.GetFloat("Lidar", "EdgeTexelScale", 0.65f), 0.25f, 1.5f);
+            EdgeThreshold = Mathf.Max(0.01f, cfg.GetFloat("Lidar", "EdgeThreshold", 0.20f));
+            EdgeStrength = Mathf.Max(0f, cfg.GetFloat("Lidar", "EdgeStrength", 1.6f));
+            EdgeThinPow = Mathf.Clamp(cfg.GetFloat("Lidar", "EdgeThinPow", 4.2f), 1f, 8f);
+            EdgeTexelScale = Mathf.Clamp(cfg.GetFloat("Lidar", "EdgeTexelScale", 0.50f), 0.25f, 1.5f);
             NoiseStrength = Mathf.Clamp01(cfg.GetFloat("Lidar", "NoiseStrength", 0.15f));
             DistanceFadeMeters = Mathf.Max(50f, cfg.GetFloat("Lidar", "DistanceFadeMeters", 175f));
-            ConeFalloffCos = Mathf.Clamp(cfg.GetFloat("Lidar", "ConeFalloffCos", 0.04f), 0.005f, 0.2f);
+            ConeFalloffCos = Mathf.Clamp(cfg.GetFloat("Lidar", "ConeFalloffCos", 0.05f), 0.005f, 0.2f);
+            HudBrightness = Mathf.Clamp(cfg.GetFloat("Lidar", "HudBrightness", 0.62f), 0.1f, 1f);
 
-            string colorHex = cfg.GetString("Lidar", "LidarColorHex", "#00FF66");
+            string colorHex = cfg.GetString("Lidar", "LidarColorHex", "#00CC66");
             if (!ColorUtility.TryParseHtmlString(colorHex, out Color parsed))
                 parsed = new Color(0f, 1f, 0.4f, 1f);
             LidarColor = parsed;

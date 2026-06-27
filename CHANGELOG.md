@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file.
 
 ## [0.1.0] — 2026-06-26
 
+### Added (DEV1P39VM)
+
+- Per-frame TTI extrapolation between probes — activates without waiting for next 5 Hz tick
+- Adaptive probe rate: `ProbeIntervalNearSec` (0.05s) when TTI within 10s of threshold or combat active
+- Smoothed probe uniforms (`UniformSmoothSec`) — cone/distance no longer snap every probe
+- Urgent fade-in (`FadeInUrgentSec` 0.12s) when TTI already below ~4.5s at activation
+
+### Added (DEV1P38V)
+
+- Razor-thin Laplacian contours: hard NMS, flat-kill for water/runways, tighter upper-lap cap
+- Tactical HUD dimming: `HudBrightness` (default 0.62), softer CRT scanlines (0.09 amplitude)
+- Symmetric lifecycle fade: `FadeInSec` (default 0.3s) separate from `FadeOutSec`
+- Velocity-only combat cone (no cam+vel blend on dive)
+
+### Fixed (DEV1P38V)
+
+- **Horizontal screen bands:** removed `ImpactDepthMask` from mode 0; static `EffectiveNearClipM` (no probe jitter)
+- Thinner edge defaults: `EdgeTexelScale=0.50`, `EdgeThreshold=0.20`, `EdgeStrength=1.6`, `EdgeThinPow=4.2`
+- Default lidar tint `#00CC66`, `ConeFalloffCos=0.05`
+
 ### Added (DEV1P37VA)
 
 - CRT HUD polish: animated scanlines + time-based micro-noise (`ApplyHudIntensity`, mode 0 only)

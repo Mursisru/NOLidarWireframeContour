@@ -87,7 +87,8 @@ namespace NOLoader.LidarWireframeContour
             ctrl.FadeTick(dt);
 
             _probeAccum += dt;
-            if (_probeAccum < LidarConfig.ProbeIntervalSec)
+            float probeInterval = ctrl.GetProbeIntervalSec();
+            if (_probeAccum < probeInterval)
                 return;
 
             _probeAccum = 0f;

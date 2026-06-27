@@ -7,7 +7,6 @@ namespace NOLoader.LidarWireframeContour
     internal sealed class LidarWireframeRenderPass : ScriptableRenderPass
     {
         private const float CombatSummaryIntervalSec = 0.5f;
-        private const float DiveLookDownThreshold = 0.26f;
         private static readonly int IdBlitTexture = Shader.PropertyToID("_BlitTexture");
         private static readonly int IdInvProj = Shader.PropertyToID("_InvProjMatrix");
         private static readonly int IdMaxLidarDistance = Shader.PropertyToID("_MaxLidarDistance");
@@ -27,6 +26,7 @@ namespace NOLoader.LidarWireframeContour
         private static readonly int IdNoiseStrength = Shader.PropertyToID("_NoiseStrength");
         private static readonly int IdDistanceFadeMeters = Shader.PropertyToID("_DistanceFadeMeters");
         private static readonly int IdConeFalloffWidth = Shader.PropertyToID("_ConeFalloffWidth");
+        private static readonly int IdHudBrightness = Shader.PropertyToID("_HudBrightness");
         private static readonly int IdTtiActivateSec = Shader.PropertyToID("_TtiActivateSec");
         private static readonly int IdDebugBypass = Shader.PropertyToID("_DebugBypass");
         private static readonly int IdDebugShaderMode = Shader.PropertyToID("_DebugShaderMode");
@@ -128,6 +128,7 @@ namespace NOLoader.LidarWireframeContour
             _material.SetFloat(IdNoiseStrength, LidarConfig.NoiseStrength);
             _material.SetFloat(IdDistanceFadeMeters, LidarConfig.DistanceFadeMeters);
             _material.SetFloat(IdConeFalloffWidth, LidarConfig.ConeFalloffCos);
+            _material.SetFloat(IdHudBrightness, LidarConfig.HudBrightness);
             _material.SetFloat(IdTtiActivateSec, LidarConfig.TtiActivateSec);
             _material.SetFloat(IdDebugBypass, debugBypass ? 1f : 0f);
             _material.SetFloat(IdDebugShaderMode, LidarConfig.DebugShaderMode);
@@ -236,10 +237,9 @@ namespace NOLoader.LidarWireframeContour
 
         private static Vector3 ResolveConeDirection(Camera cam, Vector3 camFwdView, Vector3 velView)
         {
-            float lookDown = -cam.transform.forward.y;
-            if (lookDown > DiveLookDownThreshold)
-                return camFwdView;
-            return (camFwdView + velView).normalized;
+            if (velView.sqrMagnitude > 1e-4f)
+                return velView.normalized;
+            return camFwdView;
         }
 
         private static float ComputeCenterConeDot(Matrix4x4 gpuProj, Vector3 coneDirView)

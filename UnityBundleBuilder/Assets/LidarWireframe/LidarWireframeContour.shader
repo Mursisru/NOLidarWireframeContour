@@ -20,7 +20,8 @@ Shader "Hidden/ACT/LidarWireframeContour"
         _EdgeTexelScale ("Edge Texel Scale", Range(0.25, 1.5)) = 0.65
         _NoiseStrength ("Noise Strength", Range(0, 1)) = 0.15
         _DistanceFadeMeters ("Distance Fade Meters", Float) = 175
-        _ConeFalloffWidth ("Cone Falloff Width", Float) = 0.04
+        _ConeFalloffWidth ("Cone Falloff Width", Float) = 0.05
+        _HudBrightness ("HUD Brightness", Range(0, 1)) = 0.62
         _TtiActivateSec ("TTI Activate Sec", Float) = 7
         _DebugBypass ("Debug Bypass", Float) = 0
         _DebugShaderMode ("Debug Shader Mode", Float) = 0
@@ -62,6 +63,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
             float _NoiseStrength;
             float _DistanceFadeMeters;
             float _ConeFalloffWidth;
+            float _HudBrightness;
             float _TtiActivateSec;
             float _DebugBypass;
             float _DebugShaderMode;
@@ -102,7 +104,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
 
             float ContourEdge(float2 uv, float2 texel)
             {
-                float2 t = texel * max(_EdgeTexelScale, 0.25);
+                float2 t = texel * max(_EdgeTexelScale, 0.35);
                 float dC = LinearDepthAt(uv);
                 float dL = LinearDepthAt(uv - float2(t.x, 0.0));
                 float dR = LinearDepthAt(uv + float2(t.x, 0.0));
@@ -114,7 +116,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
                 float lapThresh = _EdgeThreshold * lerp(0.15, 0.75, saturate(depthRef / 1100.0));
 
                 float lapEdge = smoothstep(lapThresh, lapThresh * 1.12, lap);
-                lapEdge *= 1.0 - smoothstep(lapThresh * 2.2, lapThresh * 4.5, lap);
+                lapEdge *= 1.0 - smoothstep(lapThresh * 2.0, lapThresh * 3.8, lap);
 
                 float rampX = abs(dC - 0.5 * (dL + dR));
                 float rampY = abs(dC - 0.5 * (dU + dD));
@@ -122,12 +124,15 @@ Shader "Hidden/ACT/LidarWireframeContour"
                 float slopeWash = smoothstep(0.0012, 0.028, rampSum);
                 lapEdge *= 1.0 - slopeWash * 0.92;
 
+                float flatKill = smoothstep(0.006, 0.0015, rampSum);
+                lapEdge *= flatKill;
+
                 float lapL = abs(4.0 * dL - LinearDepthAt(uv - float2(t.x * 2.0, 0.0)) - dC - LinearDepthAt(uv - float2(t.x, t.y)) - LinearDepthAt(uv - float2(t.x, -t.y)));
                 float lapR = abs(4.0 * dR - dC - LinearDepthAt(uv + float2(t.x * 2.0, 0.0)) - LinearDepthAt(uv + float2(t.x, t.y)) - LinearDepthAt(uv + float2(t.x, -t.y)));
                 float lapU = abs(4.0 * dU - LinearDepthAt(uv + float2(0.0, t.y * 2.0)) - dC - LinearDepthAt(uv + float2(t.x, t.y)) - LinearDepthAt(uv - float2(t.x, t.y)));
                 float lapD = abs(4.0 * dD - dC - LinearDepthAt(uv - float2(0.0, t.y * 2.0)) - LinearDepthAt(uv - float2(t.x, -t.y)) - LinearDepthAt(uv + float2(t.x, -t.y)));
-                float nms = step(lap, lapL) * step(lap, lapR) * step(lap, lapU) * step(lap, lapD);
-                lapEdge *= lerp(0.4, 1.0, nms);
+                float nms = step(lap + 1e-5, lapL) * step(lap + 1e-5, lapR) * step(lap + 1e-5, lapU) * step(lap + 1e-5, lapD);
+                lapEdge *= nms;
 
                 if (depthRef > 220.0)
                 {
@@ -141,6 +146,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
                     lapEdge = max(lapEdge, smoothstep(farThresh, farThresh * 1.15, lap2) * 0.88);
                 }
 
+                lapEdge = smoothstep(0.58, 0.72, lapEdge);
                 return pow(saturate(lapEdge * _EdgeStrength), max(_EdgeThinPow, 1.0));
             }
 
@@ -154,8 +160,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
 
             float EffectiveNearClipM()
             {
-                float impactNear = max(15.0, _ImpactDistance * 0.12);
-                return min(_NearClipM, impactNear);
+                return max(_NearClipM, 20.0);
             }
 
             float TerrainRangeMask(float linearDepth)
@@ -195,7 +200,7 @@ Shader "Hidden/ACT/LidarWireframeContour"
 
             float ApplyHudIntensity(float2 uv, float intensity)
             {
-                float scanline = sin(uv.y * _ScreenParams.y * 1.5) * 0.12 + 0.88;
+                float scanline = sin(uv.y * _ScreenParams.y * 1.5) * 0.09 + 0.91;
                 float noise = frac(sin(dot(uv + _Time.x, float2(12.9898, 78.233))) * 43758.5453);
                 float noiseFactor = lerp(1.0, 0.85 + noise * 0.15, _NoiseStrength);
                 return intensity * scanline * noiseFactor;
@@ -205,15 +210,6 @@ Shader "Hidden/ACT/LidarWireframeContour"
             {
                 float fadeM = max(_DistanceFadeMeters, 1.0);
                 return saturate((_MaxLidarDistance - linearDepth) / fadeM);
-            }
-            float ImpactDepthMask(float linearDepth)
-            {
-                float bandMin = max(EffectiveNearClipM(), _ImpactDistance - _ImpactBandHalfM);
-                float bandMax = min(_MaxLidarDistance, _ImpactDistance + _ImpactBandHalfM * 1.5);
-                float edgeFade = max(_ImpactBandHalfM * 0.15, 8.0);
-                float lo = smoothstep(bandMin - edgeFade, bandMin + edgeFade, linearDepth);
-                float hi = 1.0 - smoothstep(bandMax - edgeFade, bandMax + edgeFade, linearDepth);
-                return lo * hi;
             }
 
             float ApplyTerrainMask(float edge, float linearDepth)
@@ -268,11 +264,12 @@ Shader "Hidden/ACT/LidarWireframeContour"
                     return fixed4(lerp(scene.rgb, _LidarColor.rgb, terrainEdge * _EffectBlend), 1.0);
 
                 float cone = CombatConeMask(ViewRay(uv));
-                float contourCombat = terrainEdge * cone * ImpactDepthMask(linearDepth);
+                float contourCombat = terrainEdge * cone;
                 contourCombat = ApplyHudIntensity(uv, contourCombat);
                 contourCombat *= DistanceFade(linearDepth);
                 contourCombat *= _EffectBlend;
-                fixed3 outRgb = lerp(scene.rgb, _LidarColor.rgb, contourCombat * _LidarColor.a);
+                fixed3 lidarRgb = _LidarColor.rgb * _HudBrightness;
+                fixed3 outRgb = lerp(scene.rgb, lidarRgb, contourCombat * _LidarColor.a);
                 return fixed4(outRgb, 1.0);
             }
             ENDCG

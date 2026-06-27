@@ -11,7 +11,7 @@ Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/
 
 - **5 Hz CPU probe** — dual-stage `Physics.SphereCast` along **velocity** (wind drift aware), not nose direction
 - **TTI activation** — wireframe appears when time-to-impact &lt; 7 s
-- **GPU post-process** — Laplacian edge detection, CRT scanlines + time noise, smooth cone vignette, distance fade
+- **GPU post-process** — Laplacian edge (hard NMS, anti-flat), velocity cone, dim tactical green HUD, CRT scanlines
 - **Zero `Update()`** on probe path — `INOModTickNormal` + 200 ms accumulator
 - **CPU fade** — `_EffectBlend` driven on CPU (not shader time)
 - **URP mitigations** — manual `_InvViewProjMatrix`, optional pinned depth texture
@@ -53,22 +53,27 @@ Edit `mod_config.ini` in the mod folder:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `Enabled` | `true` | Master switch |
-| `ProbeIntervalSec` | `0.2` | SphereCast interval |
+| `ProbeIntervalSec` | `0.2` | SphereCast interval (cruise) |
+| `ProbeIntervalNearSec` | `0.05` | Faster probe when TTI ≤ 10s or combat |
 | `TtiActivateSec` | `7.0` | Activate below this TTI |
-| `FadeOutSec` | `0.3` | CPU fade duration |
+| `FadeOutSec` | `0.3` | CPU fade-out duration |
+| `FadeInSec` | `0.3` | CPU fade-in duration |
+| `FadeInUrgentSec` | `0.12` | Faster fade-in when TTI already low |
+| `UniformSmoothSec` | `0.2` | Smooth cone/distance probe jumps |
 | `ForceKeepDepthTextureActive` | `false` | Pin depth RT (avoids URP toggle stutter) |
 | `CastMaxDistanceM` | `1500` | Max cast range |
 | `CastRadiusNearM` / `CastRadiusFarM` | `2` / `50` | Dual cast radii |
 | `MinSpeedMps` | `30` | Min speed for lidar |
 | `SafeAglMeters` | `500` | Sleep above this AGL |
-| `LidarColorHex` | `#00FF66` | Wireframe tint |
-| `EdgeThreshold` | `0.18` | Laplacian edge threshold (meters, depth-scaled) |
-| `EdgeStrength` | `1.8` | Edge intensity multiplier |
-| `EdgeThinPow` | `3.4` | Line thinning exponent |
-| `EdgeTexelScale` | `0.65` | Depth sample stride (lower = thinner lines) |
+| `LidarColorHex` | `#00CC66` | Wireframe tint |
+| `EdgeThreshold` | `0.20` | Laplacian edge threshold (meters, depth-scaled) |
+| `EdgeStrength` | `1.6` | Edge intensity multiplier |
+| `EdgeThinPow` | `4.2` | Line thinning exponent |
+| `EdgeTexelScale` | `0.50` | Depth sample stride (lower = thinner lines) |
 | `NoiseStrength` | `0.15` | CRT flicker strength (mode 0) |
 | `DistanceFadeMeters` | `175` | Soft fade before max lidar range |
-| `ConeFalloffCos` | `0.04` | Smooth cone edge width (cosine space) |
+| `ConeFalloffCos` | `0.05` | Smooth cone edge width (cosine space) |
+| `HudBrightness` | `0.62` | Tactical HUD dim multiplier (mode 0) |
 | `DebugForceBlend` | `0` | Force `blend=1` (isolation test) |
 | `DebugShaderMode` | `0` | See debug ladder below |
 | `OutputCameraName` | *(empty)* | Composite camera override (default: Main Camera) |
@@ -95,7 +100,7 @@ INOModTickNormal
 LidarPostProcess
   └─ beginCameraRendering  → depth capture + backbuffer composite
 Shader bundle lidar_shaders
-  └─ Laplacian contours + impact/cone masks + CRT HUD (mode 0)
+  └─ Laplacian contours + velocity cone + CRT HUD (mode 0)
 ```
 
 ## Related projects
