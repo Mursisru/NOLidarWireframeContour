@@ -11,3 +11,4 @@ UnityBundleBuilder/build-bundle.log
 UnityBundleBuilder/build-bundle-tail.log
 deploy/
 debug-*.log
+.cursorrules

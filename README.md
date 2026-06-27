@@ -1,125 +1,243 @@
 # Lidar Wireframe Contour
 
-[![Version](https://img.shields.io/badge/version-0.2.4V-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.6V-blue.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/github/v/release/Mursisru/NOLidarWireframeContour?label=release&sort=semver)](https://github.com/Mursisru/NOLidarWireframeContour/releases)
 [![Game](https://img.shields.io/badge/game-Nuclear%20Option-darkgreen.svg)](https://store.steampowered.com/app/2168680/Nuclear_Option/)
 [![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader)
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/): active lidar terrain wireframe with a forward-looking collision cone (ACT Phase 2 visual system).
+Standalone **[NOLoader](https://github.com/Mursisru/NOLoader)** mod for **[Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/)**: GPU lidar terrain wireframe with velocity-aligned collision cone, TTI-driven activation, and URP post-process compositing.
+
+> **Display version:** `0.2.6V` in logs · **semver** `0.2.6` in `mod.json` / assembly
+
+---
 
 ## Features
 
-- **5 Hz CPU probe** — dual-stage `Physics.SphereCast` along **velocity** (wind drift aware), not nose direction
-- **TTI activation** — wireframe appears when time-to-impact &lt; 7 s
-- **GPU post-process** — half-res Laplacian edge @ 60 Hz, velocity cone, tactical green HUD, CRT scanlines, shader-time boot strobe
-- **Zero `Update()`** on probe path — `INOModTickNormal` + probe accumulator (20 Hz near / 5 Hz cruise)
-- **Shader-time fade** — `_CombatStartTime` / `_CombatEndTime` via `_Time.y` (smooth at 60/144 Hz)
-- **URP mitigations** — manual `_InvViewProjMatrix`, optional pinned depth texture
+| Area | Behavior |
+|------|----------|
+| **Probe** | Dual-radius `Physics.SphereCast` along **velocity** (wind-drift aware) |
+| **Rates** | 5 Hz cruise · **20 Hz** near TTI (`ProbeIntervalNearSec=0.05`) |
+| **Activation** | Wireframe when time-to-impact **&lt; 7 s** |
+| **Escape hold** | **1 s** continued display after pulling away (`HoldAfterEscapeSec`) |
+| **GPU** | Full-res R32 depth + Laplacian edge @ 60 Hz · backbuffer composite |
+| **Fade** | Shader-time fade via `_CombatStartTime` / `_CombatEndTime` + `_Time.y` (no CPU blend stutter) |
+| **Cone** | Smoothed at **render rate** (`VisualUpdate`) — no ~10 Hz teleport |
+| **HUD** | Tactical green, static CRT scanlines (no temporal noise flicker) |
+| **CPU** | No `Update()` on probe path — `INOModTickNormal` + render hook |
+
+---
 
 ## Requirements
 
-- Nuclear Option (Steam)
-- [NOLoader](https://github.com/Mursisru/NOLoader) installed and deployed
+- [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/) (Steam)
+- [NOLoader](https://github.com/Mursisru/NOLoader) installed and PatchTool applied
 - .NET Framework 4.8 SDK (build only)
+- Unity **2022.3 LTS** (shader bundle build only)
+
+---
 
 ## Install (players)
 
-1. Copy folder `LidarWireframeContour` into  
+1. Copy folder `LidarWireframeContour` to  
    `Nuclear Option\NOLoader\mods\`
-2. Run NOLoader PatchTool once (or use full NOLoader deploy) so `FlightHud` patches apply.
-3. Ensure `NOLidarWireframeContour_Data\` contains `lidar_shaders` bundle (see Build shaders below).
+2. Run NOLoader **PatchTool** once so `FlightHud` Harmony patches apply.
+3. Confirm `NOLidarWireframeContour_Data\lidar_shaders` exists (~20 KB bundle).
 
-## Build
+Or use a [GitHub release](https://github.com/Mursisru/NOLidarWireframeContour/releases) artifact if published.
+
+---
+
+## Quick start (pilots)
+
+1. Cockpit view · speed **&gt; 30 m/s** · AGL **&lt; 500 m**
+2. Dive toward terrain — at **TTI ≤ 7 s** the wireframe cone appears
+3. Pull up — effect stays **~1 s** then fades out smoothly
+
+---
+
+## Build & deploy
 
 ```powershell
-dotnet build NOLoader.LidarWireframeContour\NOLoader.LidarWireframeContour.csproj -c Release
+# From repo root — closes game check inside script
 .\scripts\deploy-mod.ps1
 ```
 
-Close the game before deploy.
+Manual build:
 
-### Shader asset bundle
+```powershell
+dotnet build NOLoader.LidarWireframeContour\NOLoader.LidarWireframeContour.csproj -c Release
+.\scripts\build-shader-bundle.ps1
+```
+
+**Close Nuclear Option** before deploy (PatchTool needs unlocked `Managed\*.dll`).
+
+Deploy target: `Nuclear Option\NOLoader\mods\LidarWireframeContour\`
+
+---
+
+## Shader asset bundle
+
+Runtime loads **`lidar_shaders`** (AssetBundle) only — loose `.shader` files are source/build inputs.
 
 ```powershell
 .\scripts\build-shader-bundle.ps1
 ```
 
-Requires Unity 2022.3 LTS. Output: `NOLidarWireframeContour_Data\lidar_shaders`.
+See [NOLidarWireframeContour_Data/BUILD_SHADER_BUNDLE.md](NOLidarWireframeContour_Data/BUILD_SHADER_BUNDLE.md).
 
-### Versioning
+---
 
-| Context | Format | Example |
-|---------|--------|---------|
-| `mod.json`, assembly | numeric semver only | `0.2.0` |
-| Logs, `DisplayVersion`, CHANGELOG | semver + type suffix | `0.2.0V` |
+## Architecture
 
-Suffix letters: **V** visual, **M** mechanic, **P** program, **A** audio, **Q** QoL, **O** other. `A+V→Q`; `Q+M` forbidden.
+```mermaid
+flowchart TD
+    subgraph cpu [CPU]
+        probe["ProbeTick 5 / 20 Hz"]
+        fade["FadeTick ~10 Hz — hold, combat timestamps"]
+        visual["VisualUpdate 60 Hz — cone smooth + push"]
+        probe --> fade
+        fade -->|TTI activate| gpuGate[GPU gate]
+        visual --> uniforms[Probe uniforms]
+    end
+
+    subgraph gpu [GPU when combat gate on]
+        depth["LidarDepthCapturePass — R32 depth + Laplacian edge"]
+        comp["LidarWireframeRenderPass — scene blit + composite"]
+        depth --> comp
+    end
+
+    gpuGate --> depth
+    uniforms --> comp
+    fade -->|_CombatStartTime / _CombatEndTime| comp
+```
+
+### Tick map
+
+| Hz | Component | Role |
+|----|-----------|------|
+| **60** | `LidarDepthCapturePass` | R32 depth copy + full-res Laplacian edge |
+| **60** | `LidarWireframeRenderPass` | Scene copy + composite fullscreen |
+| **60** | Composite shader `_Time.y` | Fade-in / fade-out visibility |
+| **60** | `VisualUpdate` | Cone direction & distance smoothing |
+| **20** | `ProbeTick` (near) | SphereCast + TTI, `_wantsActive` |
+| **5** | `ProbeTick` (cruise) | SphereCast far from threshold |
+| **~10** | `INOModTickNormal` | Hold timer, combat GPU gate, probe accumulator |
+| **1** | Config reload | `mod_config.ini` hot-reload |
+
+### Key types
+
+| File | Purpose |
+|------|---------|
+| `LidarWireframeMod` | NOLoader entry · `INOModTickNormal` |
+| `ACT_LidarCollisionController` | Probe, TTI gate, hold, uniform targets |
+| `LidarPostProcess` | URP hook · GPU gate · depth policy |
+| `LidarDepthCapturePass` | Depth + edge precompute |
+| `LidarWireframeRenderPass` | Backbuffer composite |
+| `LidarShaderAssets` | Bundle load `lidar_shaders` |
+
+---
 
 ## Configuration
 
-Edit `mod_config.ini` in the mod folder:
+Edit `mod_config.ini` in the mod folder (hot-reload ~1 s).
+
+### Core
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `Enabled` | `true` | Master switch |
-| `ProbeIntervalSec` | `0.2` | SphereCast interval (cruise) |
-| `ProbeIntervalNearSec` | `0.05` | Faster probe at 20 Hz when approaching TTI |
-| `TtiActivateSec` | `7.0` | Activate below this TTI |
-| `FadeOutSec` | `0.3` | CPU fade-out duration |
-| `FadeInSec` | `0.3` | CPU fade-in duration |
-| `FadeInUrgentSec` | `0.12` | Faster fade-in when TTI already low |
-| `UniformSmoothSec` | `0.2` | Smooth cone/distance probe jumps |
-| `ForceKeepDepthTextureActive` | `false` | Pin depth RT (avoids URP toggle stutter) |
+| `TtiActivateSec` | `7.0` | Activate below this TTI (seconds) |
+| `ProbeIntervalSec` | `0.2` | Probe interval cruise (5 Hz) |
+| `ProbeIntervalNearSec` | `0.05` | Probe interval near TTI (20 Hz) |
+| `HoldAfterEscapeSec` | `1.0` | Keep effect 1 s after leaving collision threat |
+| `MinSpeedMps` | `30` | Minimum speed for lidar |
+| `SafeAglMeters` | `500` | Disable above this AGL |
+
+### Fade (shader-driven)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `FadeInSec` | `0.3` | Shader fade-in duration |
+| `FadeInUrgentSec` | `0.12` | Faster fade when TTI already low |
+| `FadeOutSec` | `0.3` | Shader fade-out after hold ends |
+| `UniformSmoothSec` | `0.32` | Cone / distance smoothing time constant |
+
+### Cast & cone
+
+| Key | Default | Description |
+|-----|---------|-------------|
 | `CastMaxDistanceM` | `1500` | Max cast range |
-| `CastRadiusNearM` / `CastRadiusFarM` | `2` / `50` | Dual cast radii |
-| `MinSpeedMps` | `30` | Min speed for lidar |
-| `SafeAglMeters` | `500` | Sleep above this AGL |
+| `CastRadiusNearM` | `2` | Near SphereCast radius |
+| `CastRadiusFarM` | `50` | Far SphereCast radius |
+| `ConeHalfAngleDeg` | `15` | Velocity cone half-angle |
+| `ConeFalloffCos` | `0.05` | Cone edge softness (cosine space) |
+| `TerrainLayerMask` | `2112` | Physics layers for terrain |
+
+### Visual / edge
+
+| Key | Default | Description |
+|-----|---------|-------------|
 | `LidarColorHex` | `#00CC66` | Wireframe tint |
-| `EdgeThreshold` | `0.20` | Laplacian edge threshold (meters, depth-scaled) |
-| `EdgeStrength` | `1.6` | Edge intensity multiplier |
+| `HudBrightness` | `0.62` | HUD intensity multiplier |
+| `EdgeThreshold` | `0.20` | Laplacian threshold (depth-scaled) |
+| `EdgeStrength` | `1.6` | Edge intensity |
 | `EdgeThinPow` | `4.2` | Line thinning exponent |
-| `EdgeTexelScale` | `0.50` | Depth sample stride (lower = thinner lines) |
-| `NoiseStrength` | `0.15` | CRT flicker strength (mode 0) |
-| `DistanceFadeMeters` | `175` | Soft fade before max lidar range |
-| `ConeFalloffCos` | `0.05` | Smooth cone edge width (cosine space) |
-| `HudBrightness` | `0.62` | Tactical HUD dim multiplier (mode 0) |
-| `AppearBootSec` | `0.5` | Boot strobe duration on HUD appear |
-| `AppearBootFreqStart` | `4` | Initial blink frequency (Hz, normalized) |
-| `AppearBootFreqEnd` | `32` | Final blink frequency at end of boot |
-| `AppearBootDim` | `0.06` | Minimum brightness during boot off-phase |
-| `DebugForceBlend` | `0` | Force `blend=1` (isolation test) |
-| `DebugShaderMode` | `0` | See debug ladder below |
-| `OutputCameraName` | *(empty)* | Composite camera override (default: Main Camera) |
+| `EdgeTexelScale` | `0.50` | Depth sample stride |
+| `DistanceFadeMeters` | `175` | Soft range fade before max distance |
+| `NoiseStrength` | `0.15` | Legacy CRT noise (unused in 0.2.5V+ shader) |
+
+### Debug & GPU
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `ForceKeepDepthTextureActive` | `false` | Pin URP depth texture (debug stutter trade-off) |
+| `DebugForceBlend` | `0` | Force combat GPU path (isolation test) |
+| `DebugShaderMode` | `0` | Shader debug ladder (see below) |
+| `DebugLogVerbose` | `false` | Agent debug log file |
+| `OutputCameraName` | *(empty)* | Composite camera override (default: main) |
 
 ### Debug bisect ladder
 
-Hot-reload `mod_config.ini` (~1 s). Close/reopen not required.
-
 | Step | Settings | Expected |
 |------|----------|----------|
-| 1 | default | Log `mod_loaded`: `gpu:true`, `bundleBytes>15000`, `shaderHash` present |
-| 2 | `DebugForceBlend=1`, `DebugShaderMode=5` | **Full green screen** |
-| 3 | `DebugShaderMode=6` | White terrain lines on black |
+| 1 | default | Log: `[LidarWireframe] 0.2.6V loaded`, `gpu:true`, `bundleBytes>15000` |
+| 2 | `DebugForceBlend=1`, `DebugShaderMode=5` | Full green screen |
+| 3 | `DebugShaderMode=6` | White terrain lines |
 | 4 | `DebugShaderMode=4` | Grayscale depth |
-| 5 | `DebugForceBlend=0`, `DebugShaderMode=3` | Green contour overlay in combat |
+| 5 | `DebugForceBlend=0`, `DebugShaderMode=3` | Green contour overlay |
 | 6 | `DebugShaderMode=0` | Combat lidar at TTI ≤ 7 s |
 
-## Architecture
+---
 
-```
-INOModTickNormal
-  ├─ FadeTick(dt)          → hold timer, combat timestamps, uniform smooth
-  └─ ProbeTick (0.2 s)     → SphereCast + TTI
-LidarPostProcess
-  └─ beginCameraRendering  → depth capture + backbuffer composite
-Shader bundle lidar_shaders
-  └─ Laplacian contours + velocity cone + CRT HUD (mode 0)
-```
+## Versioning
+
+| Context | Format | Example |
+|---------|--------|---------|
+| `mod.json`, assembly, GitHub **release tag** | numeric semver | `0.2.6` |
+| Logs, `DisplayVersion`, CHANGELOG | semver + suffix | `0.2.6V` |
+
+Suffix letters: **V** visual · **M** mechanic · **P** program · **A** audio · **Q** QoL · **O** other.  
+`Q` + `M` must not appear in the same version string.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for full history (`0.1.0` legacy DEV builds → `0.2.6V`).
+
+---
 
 ## Related projects
 
-- [NOAviationCareerTracker](https://github.com/at747/NOAviationCareerTracker) — ACT meta-mod (naming convention only; no hard dependency)
-- [TerrainSilhouetteHud](https://github.com/at747/TerrainSilhouetteHud_Engine) — alternative terrain HUD (do not run both for same warning role)
+| Project | Relation |
+|---------|----------|
+| [NOLoader](https://github.com/Mursisru/NOLoader) | Required loader |
+| [NOAviationCareerTracker](https://github.com/at747/NOAviationCareerTracker) | ACT naming only — no hard dependency |
+| [TerrainSilhouetteHud](https://github.com/at747/TerrainSilhouetteHud_Engine) | Alternative HUD — do not run both for same role |
+
+---
 
 ## License
 

@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
+**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (`0.2.6`).  
+**Display versions** in logs use a type suffix (`0.2.6V` = visual).
+
 ## [0.2.6V] — 2026-06-26
 
 ### Fixed
@@ -9,6 +13,11 @@ All notable changes to this project are documented in this file.
 - Impulse flicker: removed time-varying CRT noise; static scanlines only
 - Cone teleport: lidar uniforms smoothed and pushed at **render rate** (`VisualUpdate`), softer probe direction blending
 - **1 s escape hold** (`HoldAfterEscapeSec`) when pulling away from collision before fade-out
+
+### Documentation
+
+- Full README refresh (architecture, tick map, config tables)
+- `.cursorrules` moved to local-only (gitignored)
 
 ## [0.2.5V] — 2026-06-26
 
