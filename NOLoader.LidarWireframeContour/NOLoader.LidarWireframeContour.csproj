@@ -44,6 +44,10 @@
       <HintPath>$(NuclearOptionRoot)\NuclearOption_Data\Managed\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(NuclearOptionRoot)\NuclearOption_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <None Include="mod.json" CopyToOutputDirectory="PreserveNewest" />

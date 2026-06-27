@@ -43,6 +43,12 @@ namespace NOLoader.LidarWireframeContour
         internal static float AppearBootFreqStart = 6f;
         internal static float AppearBootFreqEnd = 40f;
         internal static float AppearBootDim = 0f;
+        internal static bool BlockWhenGearDeployed = true;
+        internal static bool BlockDuringDaytime = true;
+        internal static float DaytimeStartHour = 6f;
+        internal static float DaytimeEndHour = 18f;
+        internal static bool ForceHotkeyEnabled = true;
+        internal static string ForceHotkeyBinding = "Y";
 
         internal static float ConeCosHalfAngle =>
             Mathf.Cos(ConeHalfAngleDeg * Mathf.Deg2Rad);
@@ -91,6 +97,12 @@ AppearBootSec=0.5
 AppearBootFreqStart=6
 AppearBootFreqEnd=40
 AppearBootDim=0
+BlockWhenGearDeployed=true
+BlockDuringDaytime=true
+DaytimeStartHour=6
+DaytimeEndHour=18
+ForceHotkeyEnabled=true
+ForceHotkeyBinding=Y
 ";
 
             if (ensureDefault)
@@ -133,6 +145,13 @@ AppearBootDim=0
             AppearBootFreqStart = Mathf.Clamp(cfg.GetFloat("Lidar", "AppearBootFreqStart", 4f), 1f, 40f);
             AppearBootFreqEnd = Mathf.Clamp(cfg.GetFloat("Lidar", "AppearBootFreqEnd", 32f), AppearBootFreqStart + 1f, 80f);
             AppearBootDim = Mathf.Clamp01(cfg.GetFloat("Lidar", "AppearBootDim", 0.06f));
+            BlockWhenGearDeployed = cfg.GetBool("Lidar", "BlockWhenGearDeployed", true);
+            BlockDuringDaytime = cfg.GetBool("Lidar", "BlockDuringDaytime", true);
+            DaytimeStartHour = Mathf.Clamp(cfg.GetFloat("Lidar", "DaytimeStartHour", 6f), 0f, 24f);
+            DaytimeEndHour = Mathf.Clamp(cfg.GetFloat("Lidar", "DaytimeEndHour", 18f), DaytimeStartHour, 24f);
+            ForceHotkeyEnabled = cfg.GetBool("Lidar", "ForceHotkeyEnabled", true);
+            ForceHotkeyBinding = cfg.GetString("Lidar", "ForceHotkeyBinding", "Y") ?? "Y";
+            LidarForceHotkey.ApplyBinding(ForceHotkeyBinding);
 
             string colorHex = cfg.GetString("Lidar", "LidarColorHex", "#00CC66");
             if (!ColorUtility.TryParseHtmlString(colorHex, out Color parsed))

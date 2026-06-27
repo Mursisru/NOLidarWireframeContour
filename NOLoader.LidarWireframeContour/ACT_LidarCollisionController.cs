@@ -18,6 +18,7 @@ namespace NOLoader.LidarWireframeContour
         private Rigidbody? _flightRb;
 
         private bool _wantsActive;
+        private bool _forceNightMode;
         private bool _wasShowing;
         private bool _hasProbeTrack;
         private float _holdTimer;
@@ -42,7 +43,7 @@ namespace NOLoader.LidarWireframeContour
                 return LidarConfig.ProbeIntervalSec;
 
             float margin = ProbeNearTtiMarginSec;
-            if (_targetTti <= LidarConfig.TtiActivateSec + margin || _wantsActive)
+            if (_targetTti <= LidarConfig.TtiActivateSec + margin || _wantsActive || _forceNightMode)
                 return LidarConfig.ProbeIntervalNearSec;
 
             return LidarConfig.ProbeIntervalSec;
@@ -66,6 +67,14 @@ namespace NOLoader.LidarWireframeContour
 
             LidarPostProcess.OnControllerDestroyed();
             LidarPostProcess.ResetGpuState();
+        }
+
+        private void Update()
+        {
+            if (!LidarConfig.Enabled)
+                return;
+
+            PollForceHotkey();
         }
 
         internal void FadeTick(float dt)
@@ -112,12 +121,48 @@ namespace NOLoader.LidarWireframeContour
                 return;
 
             bool needsExtrapolation = _hasProbeTrack
-                && (_wantsActive || _targetTti <= LidarConfig.TtiActivateSec + ProbeNearTtiMarginSec);
+                && (_wantsActive || _forceNightMode || _targetTti <= LidarConfig.TtiActivateSec + ProbeNearTtiMarginSec);
             if (needsExtrapolation && _flightRb != null)
                 UpdateApproachEstimate(dt, _flightRb);
 
             SmoothUniforms(dt);
             PushSmoothedUniforms();
+        }
+
+        internal void PollForceHotkey()
+        {
+            if (!LidarForceHotkey.TryConsumePress())
+                return;
+
+            _forceNightMode = !_forceNightMode;
+            _missStreak = 0;
+
+            if (_forceNightMode)
+            {
+                if (TryGetFlightBody(out _, out _))
+                    ProbeTick();
+
+                return;
+            }
+
+            if (TryGetLocalAircraft(out Aircraft aircraft)
+                && LidarActivationGates.IsAutoActivationBlocked(aircraft, false))
+            {
+                DropVisualAfterStaticBlock();
+            }
+        }
+
+        private void DropVisualAfterStaticBlock()
+        {
+            _wantsActive = false;
+            _holdTimer = 0f;
+            _missStreak = 0;
+
+            if (!_wasShowing)
+                return;
+
+            LidarPostProcess.PushCombatEnd(Time.time);
+            LidarPostProcess.SetCombatShowing(false);
         }
 
         internal void ProbeTick()
@@ -131,6 +176,7 @@ namespace NOLoader.LidarWireframeContour
             if (!TryGetFlightBody(out Aircraft aircraft, out Rigidbody rb))
             {
                 _flightRb = null;
+
                 if (_holdTimer > 0f)
                 {
                     LogProbe("can_run_hold", 0f, _targetTti, true);
@@ -154,6 +200,14 @@ namespace NOLoader.LidarWireframeContour
                 }
 
                 DeactivateProbe("low_speed", speed, 0f);
+                return;
+            }
+
+            if (!_forceNightMode && LidarActivationGates.IsAutoActivationBlocked(aircraft, false))
+            {
+                if (_wantsActive)
+                    DeactivateProbe("gates_blocked", speed, 0f);
+
                 return;
             }
 
@@ -198,7 +252,7 @@ namespace NOLoader.LidarWireframeContour
                 return;
             }
 
-            ActivateFromProbe(probe.TimeToImpactSeconds, speed);
+            ActivateFromProbe(aircraft, probe.TimeToImpactSeconds, speed);
         }
 
         private void ApplyProbeResult(LidarProbeResult probe, float speed)
@@ -216,8 +270,11 @@ namespace NOLoader.LidarWireframeContour
                 LidarPostProcess.ArmMainCameraDepth();
         }
 
-        private void ActivateFromProbe(float tti, float speed)
+        private void ActivateFromProbe(Aircraft aircraft, float tti, float speed)
         {
+            if (LidarActivationGates.IsAutoActivationBlocked(aircraft, _forceNightMode))
+                return;
+
             _missStreak = 0;
             _holdTimer = tti < LowTtiHoldThresholdSec ? HoldAfterLowTtiSec : HoldAfterHitSec;
             _wantsActive = true;
@@ -243,8 +300,12 @@ namespace NOLoader.LidarWireframeContour
             _targetTti = _targetDist / speed;
             _targetLidarDir = BlendDirection(_targetLidarDir, velDir, ExtrapolateDirBlend);
 
-            if (!_wantsActive && _holdTimer <= 0f && _targetTti <= LidarConfig.TtiActivateSec)
-                ActivateFromProbe(_targetTti, speed);
+            if (!_wantsActive && _holdTimer <= 0f && _targetTti <= LidarConfig.TtiActivateSec
+                && TryGetFlightBody(out Aircraft aircraft, out _)
+                && (_forceNightMode || !LidarActivationGates.IsAutoActivationBlocked(aircraft, false)))
+            {
+                ActivateFromProbe(aircraft, _targetTti, speed);
+            }
         }
 
         private void RegisterMiss(string reason, float speed, float metric)
@@ -280,7 +341,9 @@ namespace NOLoader.LidarWireframeContour
             if (_wantsActive || _holdTimer > 0f)
             {
                 _wantsActive = false;
-                _holdTimer = Mathf.Max(_holdTimer, LidarConfig.HoldAfterEscapeSec);
+                if (!_forceNightMode)
+                    _holdTimer = Mathf.Max(_holdTimer, LidarConfig.HoldAfterEscapeSec);
+
                 _missStreak = 0;
                 LogProbe(reason + "_escape_hold", speed, metric, true);
                 return;
@@ -340,6 +403,7 @@ namespace NOLoader.LidarWireframeContour
         private void ResetProbeState()
         {
             _wantsActive = false;
+            _forceNightMode = false;
             _wasShowing = false;
             _hasProbeTrack = false;
             _holdTimer = 0f;
@@ -376,6 +440,20 @@ namespace NOLoader.LidarWireframeContour
                 d.Append(',');
                 d.Append("\"missStreak\":").Append(_missStreak);
             });
+        }
+
+        private static bool TryGetLocalAircraft(out Aircraft aircraft)
+        {
+            aircraft = null!;
+
+            GameState state = GameManager.gameState;
+            if (state != GameState.SinglePlayer && state != GameState.Multiplayer)
+                return false;
+
+            if (!GameManager.GetLocalAircraft(out aircraft) || aircraft == null || aircraft.disabled)
+                return false;
+
+            return true;
         }
 
         private static bool TryGetFlightBody(out Aircraft aircraft, out Rigidbody rb)

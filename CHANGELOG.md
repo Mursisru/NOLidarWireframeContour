@@ -3,8 +3,65 @@
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
-**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (`0.2.6`).  
-**Display versions** in logs use a type suffix (`0.2.6V` = visual).
+**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (`0.3.3`).  
+**Display versions** in logs use suffix **`V`** only (visual / client-side; no MP mechanic flag).
+
+## [0.3.3V] — 2026-06-26
+
+### Changed
+
+- Force-night hotkey default **`Y`** (`KeyCode.Y`, physical key — layout-independent)
+
+## [0.3.2V] — 2026-06-26
+
+### Changed
+
+- Force-night hotkey: single **`Q`** (`KeyCode.Q`, layout-independent)
+- Hotkey polled in controller `Update()` (was blocked by strict cockpit/camera checks)
+- Toggle ignores gear/day static rules while on; TTI ≤ 7 s still required for effect
+
+## [0.3.1V] — 2026-06-26
+
+### Changed
+
+- Display version suffix back to **`V` only** (removed erroneous `M` — gates/hotkey are client-side, not MP mechanic changes)
+
+## [0.3.0V] — 2026-06-26
+
+### Changed
+
+- **Activation model clarified:**
+  - Static: gear down **or** daytime → no auto-activation
+  - Night + TTI ≤ `TtiActivateSec` → auto-activation
+  - **Left Control + Q** toggles **forced night mode** — ignores gear/day static rules; activation still requires TTI ≤ `TtiActivateSec` (same as real night)
+- Default hotkey: `LeftControl+Q` (physical `KeyCode.Q`)
+
+## [0.2.9VM] — 2026-06-26
+
+### Changed
+
+- Force hotkey default **Left Alt + Z** (physical `KeyCode.Z`, layout-independent)
+- Hotkey polled once per mod tick (fixes missed/double toggles from multi-camera render hook)
+- **Instant toggle:** press off = immediate off; press on at TTI ≤ 7 s = immediate on (bypass gear/day)
+- **Press on outside TTI zone:** night-like latch — one press at any TTI, auto-activates when TTI ≤ `TtiActivateSec` without second press
+
+## [0.2.8VM] — 2026-06-26
+
+### Fixed
+
+- Force hotkey (`LeftAlt+X`) no longer bypasses TTI — still requires probe TTI ≤ `TtiActivateSec`; only gear/day gates are overridden
+
+## [0.2.7VM] — 2026-06-26
+
+### Added
+
+- **Landing gear gate** — auto-activation blocked when gear is deployed (`BlockWhenGearDeployed`)
+- **Daytime gate** — auto-activation blocked during in-game day hours (`BlockDuringDaytime`, default 06:00–18:00 via `LevelInfo.timeOfDay`)
+- **Force hotkey** — toggle lidar on/off at render rate; default **Left Alt + X** (`ForceHotkeyBinding` in `mod_config.ini`)
+
+### Changed
+
+- Force mode bypasses gear/day gates only; second press disarms and turns off if active
 
 ## [0.2.6V] — 2026-06-26
 
