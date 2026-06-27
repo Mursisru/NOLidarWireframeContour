@@ -31,8 +31,6 @@ namespace NOLoader.LidarWireframeContour
                     d.Append(',');
                     d.Append("\"bundleBytes\":").Append(LidarShaderAssets.LoadedBundleBytes);
                     d.Append(',');
-                    d.Append("\"packShader\":").Append(LidarShaderAssets.HasPackShader ? "true" : "false");
-                    d.Append(',');
                     d.Append("\"edgeShader\":").Append(LidarShaderAssets.HasEdgeShader ? "true" : "false");
                     d.Append(',');
                     d.Append("\"compositeSupported\":").Append(LidarShaderAssets.CompositeSupported ? "true" : "false");

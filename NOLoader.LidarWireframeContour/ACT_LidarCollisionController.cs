@@ -6,24 +6,23 @@ namespace NOLoader.LidarWireframeContour
     {
         internal static ACT_LidarCollisionController? Instance { get; private set; }
 
-        private const int MissStreakToDeactivate = 4;
+        private const int MissStreakToDeactivate = 3;
         private const float HoldAfterHitSec = 0.8f;
         private const float HoldAfterLowTtiSec = 1.5f;
         private const float LowTtiHoldThresholdSec = 1f;
         private const float MinObstacleDistanceM = 12f;
         private const float ProbeNearTtiMarginSec = 3f;
+        private const float ProbeDirBlend = 0.28f;
+        private const float ExtrapolateDirBlend = 0.12f;
 
         private Rigidbody? _flightRb;
 
-        private float _appearBootElapsed = -1f;
-
         private bool _wantsActive;
-        private bool _wasCombatActive;
         private bool _wasShowing;
         private bool _hasProbeTrack;
-        private float _effectBlend;
         private float _holdTimer;
         private int _missStreak;
+        private int _lastVisualUpdateFrame = -1;
 
         private float _targetTti = 99f;
         private float _targetDist;
@@ -52,9 +51,7 @@ namespace NOLoader.LidarWireframeContour
         internal void OnAircraftSet(Aircraft? aircraft)
         {
             ResetProbeState();
-            LidarPostProcess.PushAppearBoot(-1f);
-            LidarPostProcess.PushBlend(0f);
-            LidarPostProcess.SetShaderActive(false);
+            LidarPostProcess.ResetGpuState();
         }
 
         private void Awake()
@@ -68,7 +65,7 @@ namespace NOLoader.LidarWireframeContour
                 Instance = null;
 
             LidarPostProcess.OnControllerDestroyed();
-            LidarPostProcess.SetCombatActive(false);
+            LidarPostProcess.ResetGpuState();
         }
 
         internal void FadeTick(float dt)
@@ -83,7 +80,35 @@ namespace NOLoader.LidarWireframeContour
                 _holdTimer = Mathf.Max(0f, _holdTimer - dt);
 
             bool shouldShow = _wantsActive || _holdTimer > 0f;
-            if (!shouldShow && _effectBlend <= 0.001f && !_hasProbeTrack && _appearBootElapsed < 0f)
+
+            if (shouldShow && !_wasShowing)
+                LidarPostProcess.TryBeginCombatVisual(ResolveFadeInSec());
+            else if (!shouldShow && _wasShowing)
+                LidarPostProcess.PushCombatEnd(Time.time);
+
+            LidarPostProcess.SetCombatShowing(shouldShow);
+
+            if (!shouldShow && LidarPostProcess.IsFadeOutComplete(Time.time))
+            {
+                LidarPostProcess.SetGpuGate(false);
+                LidarPostProcess.ClearCombatTimes();
+            }
+
+            _wasShowing = shouldShow;
+        }
+
+        internal void VisualUpdate(float dt)
+        {
+            if (!LidarConfig.Enabled)
+                return;
+
+            if (Time.frameCount == _lastVisualUpdateFrame)
+                return;
+
+            _lastVisualUpdateFrame = Time.frameCount;
+
+            bool shouldShow = _wantsActive || _holdTimer > 0f;
+            if (!shouldShow)
                 return;
 
             bool needsExtrapolation = _hasProbeTrack
@@ -91,48 +116,8 @@ namespace NOLoader.LidarWireframeContour
             if (needsExtrapolation && _flightRb != null)
                 UpdateApproachEstimate(dt, _flightRb);
 
-            bool booting = _appearBootElapsed >= 0f && _appearBootElapsed < LidarConfig.AppearBootSec;
-
-            if (_wantsActive && !_wasCombatActive)
-                _appearBootElapsed = 0f;
-
-            if (!shouldShow)
-                _appearBootElapsed = -1f;
-            else if (booting)
-                _appearBootElapsed += dt;
-            else if (_appearBootElapsed >= LidarConfig.AppearBootSec)
-                _appearBootElapsed = -1f;
-
-            LidarPostProcess.PushAppearBoot(_appearBootElapsed);
-
-            if (shouldShow)
-            {
-                if (!_wasShowing && _hasProbeTrack)
-                    SnapSmoothUniforms();
-
-                SmoothUniforms(dt);
-                PushSmoothedUniforms();
-            }
-
-            float fadeInSec = ResolveFadeInSec();
-            float fadeSpeed = shouldShow
-                ? 1f / Mathf.Max(0.05f, fadeInSec)
-                : 1f / Mathf.Max(0.05f, LidarConfig.FadeOutSec);
-
-            float target = shouldShow ? 1f : 0f;
-            if (booting)
-                _effectBlend = 1f;
-            else
-                _effectBlend = Mathf.MoveTowards(_effectBlend, target, fadeSpeed * dt);
-
-            LidarPostProcess.PushBlend(_effectBlend);
-            LidarPostProcess.SetCombatActive(shouldShow);
-
-            if (_effectBlend <= 0.001f && !shouldShow)
-                LidarPostProcess.SetShaderActive(false);
-
-            _wasShowing = shouldShow;
-            _wasCombatActive = _wantsActive;
+            SmoothUniforms(dt);
+            PushSmoothedUniforms();
         }
 
         internal void ProbeTick()
@@ -173,13 +158,16 @@ namespace NOLoader.LidarWireframeContour
             }
 
             Vector3 probeOrigin = rb.position;
-            float agl = 0f;
-            TryGetAglMeters(probeOrigin, out agl);
-
-            if (agl >= LidarConfig.SafeAglMeters && agl > 0.01f)
+            if (!(_wantsActive && _hasProbeTrack))
             {
-                DeactivateProbe("safe_agl", speed, agl);
-                return;
+                float agl = 0f;
+                TryGetAglMeters(probeOrigin, out agl);
+
+                if (agl >= LidarConfig.SafeAglMeters && agl > 0.01f)
+                {
+                    DeactivateProbe("safe_agl", speed, agl);
+                    return;
+                }
             }
 
             if (!LidarSphereCastProbe.TryEvaluate(
@@ -192,7 +180,7 @@ namespace NOLoader.LidarWireframeContour
                     LidarConfig.CastRadiusFarM,
                     out LidarProbeResult probe))
             {
-                RegisterMiss("no_cast_hit", speed, agl);
+                RegisterMiss("no_cast_hit", speed, 0f);
                 return;
             }
 
@@ -218,9 +206,14 @@ namespace NOLoader.LidarWireframeContour
             _hasProbeTrack = true;
             _targetTti = probe.TimeToImpactSeconds;
             _targetDist = probe.DistanceMeters;
-            _targetLidarDir = probe.ScanDirection.sqrMagnitude > 1e-6f
+
+            Vector3 newDir = probe.ScanDirection.sqrMagnitude > 1e-6f
                 ? probe.ScanDirection.normalized
                 : Vector3.forward;
+            _targetLidarDir = BlendDirection(_targetLidarDir, newDir, ProbeDirBlend);
+
+            if (_targetTti <= LidarConfig.TtiActivateSec + ProbeNearTtiMarginSec)
+                LidarPostProcess.ArmMainCameraDepth();
         }
 
         private void ActivateFromProbe(float tti, float speed)
@@ -228,6 +221,9 @@ namespace NOLoader.LidarWireframeContour
             _missStreak = 0;
             _holdTimer = tti < LowTtiHoldThresholdSec ? HoldAfterLowTtiSec : HoldAfterHitSec;
             _wantsActive = true;
+            SnapSmoothScalars();
+            PushSmoothedUniforms();
+            LidarPostProcess.TryBeginCombatVisual(ResolveFadeInSec());
             LogProbe("activated", speed, tti, true);
         }
 
@@ -245,7 +241,7 @@ namespace NOLoader.LidarWireframeContour
             float closingSpeed = Mathf.Max(0f, Vector3.Dot(velocity, _targetLidarDir));
             _targetDist = Mathf.Max(MinObstacleDistanceM, _targetDist - closingSpeed * dt);
             _targetTti = _targetDist / speed;
-            _targetLidarDir = velDir;
+            _targetLidarDir = BlendDirection(_targetLidarDir, velDir, ExtrapolateDirBlend);
 
             if (!_wantsActive && _holdTimer <= 0f && _targetTti <= LidarConfig.TtiActivateSec)
                 ActivateFromProbe(_targetTti, speed);
@@ -255,11 +251,19 @@ namespace NOLoader.LidarWireframeContour
         {
             if (_wantsActive || _holdTimer > 0f)
             {
+                if (_holdTimer > 0f && !_wantsActive)
+                {
+                    LogProbe(reason + "_hold_only", speed, metric, true);
+                    return;
+                }
+
                 _missStreak++;
-                if (_missStreak >= MissStreakToDeactivate && _holdTimer <= 0f)
+                if (_missStreak >= MissStreakToDeactivate)
                 {
                     _wantsActive = false;
-                    LogProbe(reason + "_off", speed, metric, false);
+                    _holdTimer = Mathf.Max(_holdTimer, LidarConfig.HoldAfterEscapeSec);
+                    _missStreak = 0;
+                    LogProbe(reason + "_escape_hold", speed, metric, true);
                     return;
                 }
 
@@ -273,6 +277,15 @@ namespace NOLoader.LidarWireframeContour
 
         private void DeactivateProbe(string reason, float speed, float metric)
         {
+            if (_wantsActive || _holdTimer > 0f)
+            {
+                _wantsActive = false;
+                _holdTimer = Mathf.Max(_holdTimer, LidarConfig.HoldAfterEscapeSec);
+                _missStreak = 0;
+                LogProbe(reason + "_escape_hold", speed, metric, true);
+                return;
+            }
+
             _missStreak = 0;
             _holdTimer = 0f;
             _wantsActive = false;
@@ -280,16 +293,26 @@ namespace NOLoader.LidarWireframeContour
             LogProbe(reason, speed, metric, false);
         }
 
-        private void SnapSmoothUniforms()
+        private static Vector3 BlendDirection(Vector3 from, Vector3 to, float t)
+        {
+            if (from.sqrMagnitude < 1e-6f)
+                return to.sqrMagnitude > 1e-6f ? to.normalized : Vector3.forward;
+
+            if (to.sqrMagnitude < 1e-6f)
+                return from.normalized;
+
+            return Vector3.Slerp(from.normalized, to.normalized, Mathf.Clamp01(t)).normalized;
+        }
+
+        private void SnapSmoothScalars()
         {
             _smoothDist = _targetDist;
             _smoothTti = _targetTti;
-            _smoothLidarDir = _targetLidarDir.sqrMagnitude > 1e-6f ? _targetLidarDir : Vector3.forward;
         }
 
         private void SmoothUniforms(float dt)
         {
-            float tau = Mathf.Max(0.03f, LidarConfig.UniformSmoothSec);
+            float tau = Mathf.Max(0.05f, LidarConfig.UniformSmoothSec);
             float k = 1f - Mathf.Exp(-dt / tau);
 
             _smoothDist = Mathf.Lerp(_smoothDist, _targetDist, k);
@@ -317,14 +340,12 @@ namespace NOLoader.LidarWireframeContour
         private void ResetProbeState()
         {
             _wantsActive = false;
-            _wasCombatActive = false;
             _wasShowing = false;
             _hasProbeTrack = false;
-            _effectBlend = 0f;
             _holdTimer = 0f;
             _missStreak = 0;
+            _lastVisualUpdateFrame = -1;
             _flightRb = null;
-            _appearBootElapsed = -1f;
             _targetTti = 99f;
             _targetDist = 0f;
             _targetLidarDir = Vector3.forward;
@@ -354,8 +375,6 @@ namespace NOLoader.LidarWireframeContour
                 d.Append("\"holdTimer\":").Append(_holdTimer.ToString("F2"));
                 d.Append(',');
                 d.Append("\"missStreak\":").Append(_missStreak);
-                d.Append(',');
-                d.Append("\"blend\":").Append(_effectBlend.ToString("F3"));
             });
         }
 
@@ -420,9 +439,7 @@ namespace NOLoader.LidarWireframeContour
         private void ResetEffect()
         {
             ResetProbeState();
-            LidarPostProcess.PushAppearBoot(-1f);
-            LidarPostProcess.PushBlend(0f);
-            LidarPostProcess.SetShaderActive(false);
+            LidarPostProcess.ResetGpuState();
         }
     }
 }

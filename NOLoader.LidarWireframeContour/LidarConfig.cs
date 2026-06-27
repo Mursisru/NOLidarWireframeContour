@@ -13,7 +13,8 @@ namespace NOLoader.LidarWireframeContour
         internal static float FadeOutSec = 0.3f;
         internal static float FadeInSec = 0.3f;
         internal static float FadeInUrgentSec = 0.12f;
-        internal static float UniformSmoothSec = 0.2f;
+        internal static float UniformSmoothSec = 0.32f;
+        internal static float HoldAfterEscapeSec = 1f;
         internal static bool ForceKeepDepthTextureActive;
         internal static float DebugForceBlend;
         internal static int DebugShaderMode;
@@ -60,8 +61,9 @@ TtiActivateSec=7.0
 FadeOutSec=0.3
 FadeInSec=0.3
 FadeInUrgentSec=0.12
-UniformSmoothSec=0.2
-ForceKeepDepthTextureActive=true
+UniformSmoothSec=0.32
+HoldAfterEscapeSec=1.0
+ForceKeepDepthTextureActive=false
 DebugForceBlend=0
 DebugShaderMode=0
 DebugLogVerbose=false
@@ -103,7 +105,8 @@ AppearBootDim=0
             FadeOutSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeOutSec", 0.3f));
             FadeInSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeInSec", 0.3f));
             FadeInUrgentSec = Mathf.Clamp(cfg.GetFloat("Lidar", "FadeInUrgentSec", 0.12f), 0.03f, FadeInSec);
-            UniformSmoothSec = Mathf.Clamp(cfg.GetFloat("Lidar", "UniformSmoothSec", 0.2f), 0.05f, 1f);
+            UniformSmoothSec = Mathf.Clamp(cfg.GetFloat("Lidar", "UniformSmoothSec", 0.32f), 0.05f, 1f);
+            HoldAfterEscapeSec = Mathf.Clamp(cfg.GetFloat("Lidar", "HoldAfterEscapeSec", 1f), 0f, 5f);
             ForceKeepDepthTextureActive = cfg.GetBool("Lidar", "ForceKeepDepthTextureActive", false);
             DebugForceBlend = Mathf.Clamp01(cfg.GetFloat("Lidar", "DebugForceBlend", 0f));
             DebugShaderMode = Mathf.Clamp(cfg.GetInt("Lidar", "DebugShaderMode", 0), 0, 6);

@@ -1,6 +1,6 @@
 # Lidar Wireframe Contour
 
-[![Version](https://img.shields.io/badge/version-0.2.2V-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.4V-blue.svg)](CHANGELOG.md)
 [![Game](https://img.shields.io/badge/game-Nuclear%20Option-darkgreen.svg)](https://store.steampowered.com/app/2168680/Nuclear_Option/)
 [![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader)
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
@@ -11,9 +11,9 @@ Standalone **NOLoader** mod for [Nuclear Option](https://store.steampowered.com/
 
 - **5 Hz CPU probe** — dual-stage `Physics.SphereCast` along **velocity** (wind drift aware), not nose direction
 - **TTI activation** — wireframe appears when time-to-impact &lt; 7 s
-- **GPU post-process** — Laplacian edge, velocity cone, tactical green HUD, CRT scanlines, 0.5s boot strobe on appear
-- **Zero `Update()`** on probe path — `INOModTickNormal` + 200 ms accumulator
-- **CPU fade** — `_EffectBlend` driven on CPU (not shader time)
+- **GPU post-process** — half-res Laplacian edge @ 60 Hz, velocity cone, tactical green HUD, CRT scanlines, shader-time boot strobe
+- **Zero `Update()`** on probe path — `INOModTickNormal` + probe accumulator (20 Hz near / 5 Hz cruise)
+- **Shader-time fade** — `_CombatStartTime` / `_CombatEndTime` via `_Time.y` (smooth at 60/144 Hz)
 - **URP mitigations** — manual `_InvViewProjMatrix`, optional pinned depth texture
 
 ## Requirements
@@ -108,7 +108,7 @@ Hot-reload `mod_config.ini` (~1 s). Close/reopen not required.
 
 ```
 INOModTickNormal
-  ├─ FadeTick(dt)          → _EffectBlend
+  ├─ FadeTick(dt)          → hold timer, combat timestamps, uniform smooth
   └─ ProbeTick (0.2 s)     → SphereCast + TTI
 LidarPostProcess
   └─ beginCameraRendering  → depth capture + backbuffer composite

@@ -8,9 +8,7 @@ namespace NOLoader.LidarWireframeContour
     internal sealed class LidarDepthCapturePass : ScriptableRenderPass
     {
         private RTHandle? _capturedDepth;
-        private RTHandle? _packedDepth;
         private RTHandle? _edgeMask;
-        private Material? _packMaterial;
         private Material? _edgeMaterial;
         private int _lastCaptureFrame = -1;
         private bool _lastCaptureOk;
@@ -34,15 +32,13 @@ namespace NOLoader.LidarWireframeContour
         {
             depthTex = null!;
             Texture? raw = _capturedDepth != null ? _capturedDepth.rt : null;
-            Texture? packed = _packedDepth != null ? _packedDepth.rt : null;
-            Texture? chosen = raw != null ? raw : packed;
-            if (chosen == null)
+            if (raw == null)
                 return false;
 
             if (_lastCaptureFrame != Time.frameCount)
                 return false;
 
-            depthTex = chosen;
+            depthTex = raw;
             return _lastCaptureOk;
         }
 
@@ -67,22 +63,10 @@ namespace NOLoader.LidarWireframeContour
                 _capturedDepth = null;
             }
 
-            if (_packedDepth != null)
-            {
-                _packedDepth.Release();
-                _packedDepth = null;
-            }
-
             if (_edgeMask != null)
             {
                 _edgeMask.Release();
                 _edgeMask = null;
-            }
-
-            if (_packMaterial != null)
-            {
-                Object.Destroy(_packMaterial);
-                _packMaterial = null;
             }
 
             if (_edgeMaterial != null)
@@ -101,7 +85,7 @@ namespace NOLoader.LidarWireframeContour
             _lastCaptureOk = false;
             _lastEdgePassOk = false;
 
-            if (LidarPostProcess.GetUniformSnapshot().EffectBlend <= 0.001f)
+            if (!LidarPostProcess.ShouldEnqueueGpuPasses())
                 return;
 
             Camera cam = renderingData.cameraData.camera;
@@ -145,15 +129,6 @@ namespace NOLoader.LidarWireframeContour
                 TextureWrapMode.Clamp,
                 name: "_LidarDepthCapture");
 
-            RenderTextureDescriptor packDesc = desc;
-            packDesc.graphicsFormat = GraphicsFormat.R8G8B8A8_UNorm;
-            RenderingUtils.ReAllocateIfNeeded(
-                ref _packedDepth,
-                packDesc,
-                FilterMode.Point,
-                TextureWrapMode.Clamp,
-                name: "_LidarDepthPacked");
-
             RenderTextureDescriptor edgeDesc = desc;
             edgeDesc.graphicsFormat = GraphicsFormat.R8_UNorm;
             RenderingUtils.ReAllocateIfNeeded(
@@ -163,10 +138,9 @@ namespace NOLoader.LidarWireframeContour
                 TextureWrapMode.Clamp,
                 name: "_LidarDepthEdge");
 
-            if (_capturedDepth == null || _packedDepth == null || _edgeMask == null)
+            if (_capturedDepth == null || _edgeMask == null)
                 return;
 
-            EnsurePackMaterial();
             EnsureEdgeMaterial();
 
             CommandBuffer cmd = CommandBufferPool.Get("ACT.LidarDepthCapture");
@@ -193,13 +167,6 @@ namespace NOLoader.LidarWireframeContour
                 CoreUtils.SetRenderTarget(cmd, _capturedDepth);
                 Blitter.BlitTexture(cmd, depthSource, scaleBias, copyDepthMaterial, 0);
 
-                if (_packMaterial != null && _capturedDepth.rt != null)
-                {
-                    _packMaterial.SetTexture(IdMainTex, _capturedDepth.rt);
-                    CoreUtils.SetRenderTarget(cmd, _packedDepth);
-                    CoreUtils.DrawFullScreen(cmd, _packMaterial, shaderPassId: 0);
-                }
-
                 if (_edgeMaterial != null && _capturedDepth.rt != null)
                 {
                     _edgeMaterial.SetTexture(IdMainTex, _capturedDepth.rt);
@@ -219,7 +186,6 @@ namespace NOLoader.LidarWireframeContour
             _lastCaptureOk = true;
             _lastCaptureFrame = Time.frameCount;
 
-            // #region agent log
             LidarDebugLog.Write("D", "LidarDepthCapturePass.Execute", "depth_captured", d =>
             {
                 d.Append("\"copyToDepth\":").Append(copyToDepth ? "true" : "false");
@@ -232,13 +198,14 @@ namespace NOLoader.LidarWireframeContour
                 d.Append(',');
                 d.Append("\"h\":").Append(desc.height);
                 d.Append(',');
-                d.Append("\"packed\":").Append(_packMaterial != null ? "true" : "false");
+                d.Append("\"edgeW\":").Append(edgeDesc.width);
+                d.Append(',');
+                d.Append("\"edgeH\":").Append(edgeDesc.height);
                 d.Append(',');
                 d.Append("\"depthFmt\":\"r32\"");
                 d.Append(',');
                 d.Append("\"edge\":").Append(_lastEdgePassOk ? "true" : "false");
             });
-            // #endregion
         }
 
         private static void ConfigureMsaaKeywords(CommandBuffer cmd, int msaa)
@@ -266,21 +233,6 @@ namespace NOLoader.LidarWireframeContour
                     cmd.DisableShaderKeyword(ShaderKeywordStrings.DepthMsaa8);
                     break;
             }
-        }
-
-        private void EnsurePackMaterial()
-        {
-            if (_packMaterial != null)
-                return;
-
-            Shader? packShader = LidarShaderAssets.PackShader;
-            if (packShader == null)
-                return;
-
-            _packMaterial = new Material(packShader)
-            {
-                hideFlags = HideFlags.HideAndDontSave,
-            };
         }
 
         private void EnsureEdgeMaterial()
