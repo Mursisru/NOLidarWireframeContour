@@ -91,7 +91,7 @@ namespace NOLoader.LidarWireframeContour
             if (_probeAccum < probeInterval)
                 return;
 
-            _probeAccum = 0f;
+            _probeAccum -= probeInterval;
             ctrl.ProbeTick();
         }
     }

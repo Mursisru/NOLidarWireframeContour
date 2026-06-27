@@ -1,6 +1,6 @@
 # Lidar Wireframe Contour
 
-[![Version](https://img.shields.io/badge/version-0.2.1V-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.2V-blue.svg)](CHANGELOG.md)
 [![Game](https://img.shields.io/badge/game-Nuclear%20Option-darkgreen.svg)](https://store.steampowered.com/app/2168680/Nuclear_Option/)
 [![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader)
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
@@ -63,7 +63,7 @@ Edit `mod_config.ini` in the mod folder:
 |-----|---------|-------------|
 | `Enabled` | `true` | Master switch |
 | `ProbeIntervalSec` | `0.2` | SphereCast interval (cruise) |
-| `ProbeIntervalNearSec` | `0.033` | Faster probe at 30 Hz when TTI ≤ 10s or combat |
+| `ProbeIntervalNearSec` | `0.05` | Faster probe at 20 Hz when approaching TTI |
 | `TtiActivateSec` | `7.0` | Activate below this TTI |
 | `FadeOutSec` | `0.3` | CPU fade-out duration |
 | `FadeInSec` | `0.3` | CPU fade-in duration |

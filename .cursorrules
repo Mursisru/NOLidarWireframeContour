@@ -20,7 +20,7 @@ ACT Phase 2 standalone: Lidar Wireframe Contour (NOLoader mod).
 
 ## Version
 
-0.2.1V — reglement: `MAJOR.MINOR.PATCH` + suffix (this mod: V=visual only). Numeric `0.2.0` in mod.json/assembly only.
+0.2.2V — reglement: `MAJOR.MINOR.PATCH` + suffix (this mod: V=visual only). Numeric `0.2.0` in mod.json/assembly only.
 
 Legacy DEV channel (P28–P40) retired; see CHANGELOG `[0.1.0]`.
 

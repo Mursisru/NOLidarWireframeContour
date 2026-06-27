@@ -13,6 +13,8 @@ namespace NOLoader.LidarWireframeContour
         private const float MinObstacleDistanceM = 12f;
         private const float ProbeNearTtiMarginSec = 3f;
 
+        private Rigidbody? _flightRb;
+
         private float _appearBootElapsed = -1f;
 
         private bool _wantsActive;
@@ -41,7 +43,7 @@ namespace NOLoader.LidarWireframeContour
                 return LidarConfig.ProbeIntervalSec;
 
             float margin = ProbeNearTtiMarginSec;
-            if (_targetTti <= LidarConfig.TtiActivateSec + margin || _wantsActive || _holdTimer > 0f)
+            if (_targetTti <= LidarConfig.TtiActivateSec + margin || _wantsActive)
                 return LidarConfig.ProbeIntervalNearSec;
 
             return LidarConfig.ProbeIntervalSec;
@@ -80,10 +82,15 @@ namespace NOLoader.LidarWireframeContour
             if (_holdTimer > 0f)
                 _holdTimer = Mathf.Max(0f, _holdTimer - dt);
 
-            if (TryGetFlightBody(out _, out Rigidbody rb))
-                UpdateApproachEstimate(dt, rb);
-
             bool shouldShow = _wantsActive || _holdTimer > 0f;
+            if (!shouldShow && _effectBlend <= 0.001f && !_hasProbeTrack && _appearBootElapsed < 0f)
+                return;
+
+            bool needsExtrapolation = _hasProbeTrack
+                && (_wantsActive || _targetTti <= LidarConfig.TtiActivateSec + ProbeNearTtiMarginSec);
+            if (needsExtrapolation && _flightRb != null)
+                UpdateApproachEstimate(dt, _flightRb);
+
             bool booting = _appearBootElapsed >= 0f && _appearBootElapsed < LidarConfig.AppearBootSec;
 
             if (_wantsActive && !_wasCombatActive)
@@ -93,6 +100,8 @@ namespace NOLoader.LidarWireframeContour
                 _appearBootElapsed = -1f;
             else if (booting)
                 _appearBootElapsed += dt;
+            else if (_appearBootElapsed >= LidarConfig.AppearBootSec)
+                _appearBootElapsed = -1f;
 
             LidarPostProcess.PushAppearBoot(_appearBootElapsed);
 
@@ -136,6 +145,7 @@ namespace NOLoader.LidarWireframeContour
 
             if (!TryGetFlightBody(out Aircraft aircraft, out Rigidbody rb))
             {
+                _flightRb = null;
                 if (_holdTimer > 0f)
                 {
                     LogProbe("can_run_hold", 0f, _targetTti, true);
@@ -145,6 +155,8 @@ namespace NOLoader.LidarWireframeContour
                 DeactivateProbe("can_run_false", 0f, 0f);
                 return;
             }
+
+            _flightRb = rb;
 
             Vector3 velocity = rb.velocity;
             float speed = velocity.magnitude;
@@ -311,6 +323,7 @@ namespace NOLoader.LidarWireframeContour
             _effectBlend = 0f;
             _holdTimer = 0f;
             _missStreak = 0;
+            _flightRb = null;
             _appearBootElapsed = -1f;
             _targetTti = 99f;
             _targetDist = 0f;

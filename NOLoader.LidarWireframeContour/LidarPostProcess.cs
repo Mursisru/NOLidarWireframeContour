@@ -136,26 +136,24 @@ namespace NOLoader.LidarWireframeContour
             _impactDistance = impactDistanceM;
             _timeToImpact = timeToImpact;
             _lidarDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
-
-            // #region agent log
-            LidarDebugLog.Write("B", "LidarPostProcess.PushProbeUniforms", "probe_hit", d =>
-            {
-                d.Append("\"impactDist\":").Append(impactDistanceM.ToString("F1"));
-                d.Append(',');
-                d.Append("\"tti\":").Append(timeToImpact.ToString("F2"));
-            });
-            // #endregion
         }
 
         internal static void PushAppearBoot(float elapsedSec)
         {
+            if (Mathf.Abs(_appearBootElapsed - elapsedSec) < 0.0001f)
+                return;
+
             _appearBootElapsed = elapsedSec;
         }
 
         internal static void PushBlend(float blend)
         {
+            blend = Mathf.Clamp01(blend);
+            if (Mathf.Abs(_effectBlend - blend) < 0.0001f)
+                return;
+
             float prev = _effectBlend;
-            _effectBlend = Mathf.Clamp01(blend);
+            _effectBlend = blend;
             ApplyDepthPolicy(ShouldKeepDepthActive());
 
             if (prev > 0.001f && _effectBlend <= 0.001f)

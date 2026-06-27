@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.2V] — 2026-06-26
+
+### Changed
+
+- Near-combat probe rate set to 20 Hz (`ProbeIntervalNearSec=0.05`); hold-only uses cruise 5 Hz
+
+### Fixed
+
+- Perf: idle `FadeTick` early-out, cached `Rigidbody`, gated TTI extrapolation
+- Perf: skip redundant blend/boot uniform pushes; remove per-frame probe file logging
+- `DebugLogVerbose` default `false`; boot timer resets after sequence completes
+
 ## [0.2.1V] — 2026-06-26
 
 ### Fixed

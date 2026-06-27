@@ -8,7 +8,7 @@ namespace NOLoader.LidarWireframeContour
     {
         internal static bool Enabled = true;
         internal static float ProbeIntervalSec = 0.2f;
-        internal static float ProbeIntervalNearSec = 1f / 30f;
+        internal static float ProbeIntervalNearSec = 0.05f;
         internal static float TtiActivateSec = 7f;
         internal static float FadeOutSec = 0.3f;
         internal static float FadeInSec = 0.3f;
@@ -17,7 +17,7 @@ namespace NOLoader.LidarWireframeContour
         internal static bool ForceKeepDepthTextureActive;
         internal static float DebugForceBlend;
         internal static int DebugShaderMode;
-        internal static bool DebugLogVerbose = true;
+        internal static bool DebugLogVerbose;
         internal static string OutputCameraName = string.Empty;
         internal static float CastMaxDistanceM = 1500f;
         internal static float CastRadiusNearM = 2f;
@@ -55,7 +55,7 @@ namespace NOLoader.LidarWireframeContour
             const string defaults = @"[Lidar]
 Enabled=true
 ProbeIntervalSec=0.2
-ProbeIntervalNearSec=0.033333
+ProbeIntervalNearSec=0.05
 TtiActivateSec=7.0
 FadeOutSec=0.3
 FadeInSec=0.3
@@ -64,7 +64,7 @@ UniformSmoothSec=0.2
 ForceKeepDepthTextureActive=true
 DebugForceBlend=0
 DebugShaderMode=0
-DebugLogVerbose=true
+DebugLogVerbose=false
 OutputCameraName=
 CastMaxDistanceM=1500
 CastRadiusNearM=2
@@ -98,7 +98,7 @@ AppearBootDim=0
 
             Enabled = cfg.GetBool("Lidar", "Enabled", true);
             ProbeIntervalSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "ProbeIntervalSec", 0.2f));
-            ProbeIntervalNearSec = Mathf.Clamp(cfg.GetFloat("Lidar", "ProbeIntervalNearSec", 1f / 30f), 0.02f, ProbeIntervalSec);
+            ProbeIntervalNearSec = Mathf.Clamp(cfg.GetFloat("Lidar", "ProbeIntervalNearSec", 0.05f), 0.02f, ProbeIntervalSec);
             TtiActivateSec = Mathf.Max(0.5f, cfg.GetFloat("Lidar", "TtiActivateSec", 7f));
             FadeOutSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeOutSec", 0.3f));
             FadeInSec = Mathf.Max(0.05f, cfg.GetFloat("Lidar", "FadeInSec", 0.3f));
@@ -107,7 +107,7 @@ AppearBootDim=0
             ForceKeepDepthTextureActive = cfg.GetBool("Lidar", "ForceKeepDepthTextureActive", false);
             DebugForceBlend = Mathf.Clamp01(cfg.GetFloat("Lidar", "DebugForceBlend", 0f));
             DebugShaderMode = Mathf.Clamp(cfg.GetInt("Lidar", "DebugShaderMode", 0), 0, 6);
-            DebugLogVerbose = cfg.GetBool("Lidar", "DebugLogVerbose", true);
+            DebugLogVerbose = cfg.GetBool("Lidar", "DebugLogVerbose", false);
             OutputCameraName = cfg.GetString("Lidar", "OutputCameraName", string.Empty) ?? string.Empty;
             CastMaxDistanceM = Mathf.Max(100f, cfg.GetFloat("Lidar", "CastMaxDistanceM", 1500f));
             CastRadiusNearM = Mathf.Max(0.5f, cfg.GetFloat("Lidar", "CastRadiusNearM", 2f));
