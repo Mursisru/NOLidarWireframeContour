@@ -183,6 +183,13 @@ namespace NOLoader.LidarWireframeContour
                     return;
                 }
 
+                // #region agent log
+                LidarDebugLog.Audit("H2", "ACT_LidarCollisionController.ProbeTick", "can_run_false", d =>
+                {
+                    d.Append("\"reason\":\"").Append(DiagnoseFlightBodyBlock().Replace("\\", "\\\\").Replace("\"", "\\\"")).Append('\"');
+                }, 2f);
+                // #endregion
+
                 DeactivateProbe("can_run_false", 0f, 0f);
                 return;
             }
@@ -205,6 +212,17 @@ namespace NOLoader.LidarWireframeContour
 
             if (!_forceNightMode && LidarActivationGates.IsAutoActivationBlocked(aircraft, false))
             {
+                // #region agent log
+                LidarDebugLog.Audit("H3", "ACT_LidarCollisionController.ProbeTick", "gates_blocked", d =>
+                {
+                    d.Append("\"gear\":").Append(LidarActivationGates.IsGearBlocking(aircraft) ? "true" : "false");
+                    d.Append(',');
+                    d.Append("\"day\":").Append(LidarActivationGates.IsDaytimeBlocking() ? "true" : "false");
+                    d.Append(',');
+                    d.Append("\"forceNight\":").Append(_forceNightMode ? "true" : "false");
+                }, 2f);
+                // #endregion
+
                 if (_wantsActive)
                     DeactivateProbe("gates_blocked", speed, 0f);
 
@@ -278,6 +296,14 @@ namespace NOLoader.LidarWireframeContour
             _missStreak = 0;
             _holdTimer = tti < LowTtiHoldThresholdSec ? HoldAfterLowTtiSec : HoldAfterHitSec;
             _wantsActive = true;
+            // #region agent log
+            LidarDebugLog.Audit("H3", "ACT_LidarCollisionController.ActivateFromProbe", "activated", d =>
+            {
+                d.Append("\"tti\":").Append(tti.ToString("F2"));
+                d.Append(',');
+                d.Append("\"speed\":").Append(speed.ToString("F1"));
+            });
+            // #endregion
             SnapSmoothScalars();
             PushSmoothedUniforms();
             LidarPostProcess.TryBeginCombatVisual(ResolveFadeInSec());
@@ -494,6 +520,48 @@ namespace NOLoader.LidarWireframeContour
                 return false;
 
             return true;
+        }
+
+        private static string DiagnoseFlightBodyBlock()
+        {
+            GameState state = GameManager.gameState;
+            if (state != GameState.SinglePlayer && state != GameState.Multiplayer)
+                return "game_state_" + state;
+
+            if (!GameManager.flightControlsEnabled)
+                return "flight_controls_disabled";
+
+            if (!GameManager.GetLocalAircraft(out Aircraft aircraft) || aircraft == null)
+                return "no_local_aircraft";
+
+            if (aircraft.disabled)
+                return "aircraft_disabled";
+
+            if (aircraft.cockpit == null)
+                return "cockpit_null";
+
+            if (aircraft.cockpit.rb == null)
+                return "cockpit_rb_null";
+
+            CameraStateManager? csm = SceneSingleton<CameraStateManager>.i;
+            if (csm == null)
+                return "csm_null";
+
+            if (csm.mainCamera == null)
+                return "main_camera_null";
+
+            if (csm.currentState != csm.cockpitState)
+                return "not_cockpit_camera";
+
+            FlightHud? fh = SceneSingleton<FlightHud>.i;
+            if (fh == null)
+                return "flight_hud_null";
+
+            Canvas? flightCanvas = fh.GetComponent<Canvas>();
+            if (flightCanvas != null && !flightCanvas.gameObject.activeSelf)
+                return "flight_hud_canvas_inactive";
+
+            return "unknown";
         }
 
         private static bool TryGetAglMeters(Vector3 position, out float aglMeters)

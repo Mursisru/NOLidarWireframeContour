@@ -1,13 +1,13 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("NOLoader.LidarWireframeContour")]
-[assembly: AssemblyDescription("ACT Phase 2 — Lidar Wireframe Contour with forward collision cone")]
+[assembly: AssemblyTitle("BepInEx.LidarWireframeContour")]
+[assembly: AssemblyDescription("Lidar Wireframe Contour — BepInEx plugin")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Mursisru")]
 [assembly: AssemblyProduct("Lidar Wireframe Contour")]
-[assembly: AssemblyCopyright("Copyright © Mursisru 2026")]
+[assembly: AssemblyCopyright("Copyright © Mursisru")]
 [assembly: ComVisible(false)]
-[assembly: Guid("b2c3d4e5-f6a7-8901-bcde-f12345678902")]
+[assembly: Guid("d4e5f6a7-b8c9-0123-def0-456789abcdef")]
 [assembly: AssemblyVersion("0.3.5.0")]
 [assembly: AssemblyFileVersion("0.3.5.0")]

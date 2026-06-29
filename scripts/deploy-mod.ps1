@@ -66,6 +66,8 @@ function Copy-LidarModPayload {
 
     Copy-Item (Join-Path $SourceDeploy "NOLoader.LidarWireframeContour.dll") $TargetGame -Force
 
+    Copy-Item (Join-Path $SourceDeploy "NOLidarWireframeContour.Core.dll") $TargetGame -Force
+
     Copy-Item (Join-Path $SourceDeploy "NOLoader.ModConfig.dll") $TargetGame -Force
 
     Copy-Item (Join-Path $SourceDeploy "mod.json") $TargetGame -Force
@@ -143,6 +145,8 @@ $dll = Join-Path $repoRoot "NOLoader.LidarWireframeContour\bin\$Configuration\ne
 
 $modConfigDll = Join-Path $noloaderRoot "DEV.SDK\shared\NOLoader.ModConfig\bin\Release\net48\NOLoader.ModConfig.dll"
 
+$coreDll = Join-Path $repoRoot "NOLidarWireframeContour.Core\bin\$Configuration\net48\NOLidarWireframeContour.Core.dll"
+
 $deployMods = Join-Path $repoRoot "deploy\NOLoader\mods\LidarWireframeContour"
 
 $gameMods = Join-Path $GameRoot "NOLoader\mods\LidarWireframeContour"
@@ -176,6 +180,8 @@ if (-not (Test-Path $dll)) {
 New-Item -ItemType Directory -Force -Path $deployMods | Out-Null
 
 Copy-Item $dll $deployMods -Force
+
+Copy-Item $coreDll $deployMods -Force
 
 Copy-Item $modConfigDll $deployMods -Force
 
@@ -224,7 +230,9 @@ if (-not $SkipPatchTool) {
 
 
 
-Assert-DeployArtifact -Path (Join-Path $gameMods "NOLoader.LidarWireframeContour.dll") -MinBytes 40000 -Label "mod DLL"
+Assert-DeployArtifact -Path (Join-Path $gameMods "NOLoader.LidarWireframeContour.dll") -MinBytes 4000 -Label "mod DLL"
+
+Assert-DeployArtifact -Path (Join-Path $gameMods "NOLidarWireframeContour.Core.dll") -MinBytes 20000 -Label "Core DLL"
 
 Assert-DeployArtifact -Path (Join-Path $gameMods "NOLoader.ModConfig.dll") -MinBytes 1000 -Label "ModConfig DLL"
 

@@ -3,8 +3,34 @@
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
-**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (`0.3.3`).  
+**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (`0.3.4`).  
 **Display versions** in logs use suffix **`V`** only (visual / client-side; no MP mechanic flag).
+
+## [0.3.5V] — 2026-06-27
+
+### Fixed
+
+- **BepInEx:** tick loop moved to `DontDestroyOnLoad` host (plugin `GameObject` never received `Update` — probe/GPU chain dead)
+- Harmony + GPU init deferred to mission scene load (parity with NOLoader `loadStage: Mission`)
+
+## [0.3.4V] — 2026-06-26
+
+### Added
+
+- **BepInEx loader** (`BepInEx.LidarWireframeContour`) with full parity to NOLoader build
+- Shared runtime in **`NOLidarWireframeContour.Core`** (probe, URP passes, gates, hotkey)
+- BepInEx **Configuration Manager** (F1) — all settings via `Config.Bind` (43 keys)
+- `scripts/deploy-bepinex.ps1` — deploy plugin + Core DLL + shader data to `BepInEx\plugins\`
+
+### Changed
+
+- NOLoader project is a thin wrapper (`mod.json`, `mod_config.ini`, PatchTool patches)
+- `mod_config.ini` hot-reload uses `LidarSettingsSnapshot` → `LidarConfig.ApplySnapshot`
+- Deploy copies **`NOLidarWireframeContour.Core.dll`** alongside loader DLLs
+
+### Important
+
+- **Do not install NOLoader and BepInEx builds at the same time** — both hook URP; pick one loader.
 
 ## [0.3.3V] — 2026-06-26
 

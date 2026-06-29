@@ -88,6 +88,9 @@ namespace NOLoader.LidarWireframeContour
             s_pass.SetDepthCapturePass(s_depthPass);
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
             RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+            // #region agent log
+            LidarDebugLog.Audit("H5", "LidarPostProcess.EnsurePipelineHook", "urp_hooked", null);
+            // #endregion
 
             if (LidarConfig.ForceKeepDepthTextureActive)
                 EnsureMainCameraDepth(true);
@@ -275,6 +278,18 @@ namespace NOLoader.LidarWireframeContour
                 if (camera.cameraType == CameraType.Game && Time.unscaledTime - _lastRejectLogTime > 2f)
                 {
                     _lastRejectLogTime = Time.unscaledTime;
+                    // #region agent log
+                    LidarDebugLog.Audit("H4", "LidarPostProcess.OnBeginCameraRendering", "gpu_gate_off", d =>
+                    {
+                        d.Append("\"combatShowing\":").Append(_combatShowing ? "true" : "false");
+                        d.Append(',');
+                        d.Append("\"wantsActive\":").Append(ACT_LidarCollisionController.Instance != null && ACT_LidarCollisionController.Instance.LastEstimatedTti < 99f ? "probe" : "none");
+                        d.Append(',');
+                        d.Append("\"debugForce\":").Append(LidarConfig.DebugForceBlend.ToString("F3"));
+                        d.Append(',');
+                        d.Append("\"cam\":\"").Append(EscapeDbg(camera.name)).Append('\"');
+                    }, 2f);
+                    // #endregion
                     LidarDebugLog.Write("C", "LidarPostProcess.OnBeginCameraRendering", "enqueue_rejected", d =>
                     {
                         d.Append("\"reason\":\"gpu_gate_off\"");
@@ -343,6 +358,15 @@ namespace NOLoader.LidarWireframeContour
             {
                 s_pass.SetMaterial(_material);
                 urp.scriptableRenderer.EnqueuePass(s_pass);
+
+                // #region agent log
+                LidarDebugLog.Audit("H5", "LidarPostProcess.OnBeginCameraRendering", "pass_enqueued", d =>
+                {
+                    d.Append("\"cam\":\"").Append(EscapeDbg(camera.name)).Append('\"');
+                    d.Append(',');
+                    d.Append("\"shaderMode\":").Append(LidarConfig.DebugShaderMode);
+                }, 2f);
+                // #endregion
 
                 LidarDebugLog.Write("C", "LidarPostProcess.OnBeginCameraRendering", "pass_enqueued", d =>
                 {

@@ -1,15 +1,24 @@
 # Lidar Wireframe Contour
 
-[![Version](https://img.shields.io/badge/version-0.3.3V-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.5V-blue.svg)](CHANGELOG.md)
 [![Release](https://img.shields.io/github/v/release/Mursisru/NOLidarWireframeContour?label=release&sort=semver)](https://github.com/Mursisru/NOLidarWireframeContour/releases)
 [![Game](https://img.shields.io/badge/game-Nuclear%20Option-darkgreen.svg)](https://store.steampowered.com/app/2168680/Nuclear_Option/)
-[![Loader](https://img.shields.io/badge/loader-NOLoader-orange.svg)](https://github.com/Mursisru/NOLoader)
+[![Loader](https://img.shields.io/badge/loader-NOLoader%20%7C%20BepInEx-orange.svg)](https://github.com/Mursisru/NOLoader)
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-Standalone **[NOLoader](https://github.com/Mursisru/NOLoader)** mod for **[Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/)**: GPU lidar terrain wireframe with velocity-aligned collision cone, TTI-driven activation, and URP post-process compositing.
+GPU lidar terrain wireframe for **[Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/)** — velocity-aligned collision cone, TTI-driven activation, URP post-process compositing.
 
-> **Display version:** `0.3.3V` in logs · **semver** `0.3.1` in `mod.json` / assembly
+Two install paths (pick **one**):
+
+| Loader | Path | Config |
+|--------|------|--------|
+| **[NOLoader](https://github.com/Mursisru/NOLoader)** | `NOLoader\mods\LidarWireframeContour\` | `mod_config.ini` (hot-reload) |
+| **BepInEx 5** + [Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) | `BepInEx\plugins\` | **F1** in-game |
+
+> **Warning:** Do **not** run NOLoader **and** BepInEx builds together — both hook the same URP pipeline.
+
+> **Display version:** `0.3.5V` in logs · **semver** `0.3.5` in `mod.json` / `[BepInPlugin]`
 
 ---
 
@@ -34,20 +43,37 @@ Standalone **[NOLoader](https://github.com/Mursisru/NOLoader)** mod for **[Nucle
 ## Requirements
 
 - [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/) (Steam)
-- [NOLoader](https://github.com/Mursisru/NOLoader) installed and PatchTool applied
+- **NOLoader path:** [NOLoader](https://github.com/Mursisru/NOLoader) + PatchTool applied
+- **BepInEx path:** [BepInEx 5](https://docs.bepinex.dev/) + [Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) plugin
 - .NET Framework 4.8 SDK (build only)
 - Unity **2022.3 LTS** (shader bundle build only)
 
 ---
 
-## Install (players)
+## Install (NOLoader)
 
 1. Copy folder `LidarWireframeContour` to  
    `Nuclear Option\NOLoader\mods\`
-2. Run NOLoader **PatchTool** once so `FlightHud` Harmony patches apply.
-3. Confirm `NOLidarWireframeContour_Data\lidar_shaders` exists (~20 KB bundle).
+2. Ensure **`NOLidarWireframeContour.Core.dll`** and **`NOLoader.LidarWireframeContour.dll`** are in that folder.
+3. Run NOLoader **PatchTool** once so `FlightHud` Harmony patches apply.
+4. Confirm `NOLidarWireframeContour_Data\lidar_shaders` exists (~20 KB bundle).
 
 Or use a [GitHub release](https://github.com/Mursisru/NOLidarWireframeContour/releases) artifact if published.
+
+---
+
+## Install (BepInEx)
+
+1. Install **BepInEx 5** for Nuclear Option and run the game once.
+2. Install **[Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)** into `BepInEx\plugins\`.
+3. Copy to `Nuclear Option\BepInEx\plugins\`:
+   - `BepInEx.LidarWireframeContour.dll`
+   - `NOLidarWireframeContour.Core.dll`
+4. Copy folder `NOLidarWireframeContour_Data\` (bundle + hash) next to those DLLs:
+   `BepInEx\plugins\NOLidarWireframeContour_Data\`
+5. Press **F1** in-game to edit settings (sections: General, Probe, Activation, Fade, Visual, Debug).
+
+**Do not** also install the NOLoader mod folder — pick one loader only.
 
 ---
 
@@ -62,20 +88,26 @@ Or use a [GitHub release](https://github.com/Mursisru/NOLidarWireframeContour/re
 ## Build & deploy
 
 ```powershell
-# From repo root — closes game check inside script
+# NOLoader — closes game check inside script
 .\scripts\deploy-mod.ps1
+
+# BepInEx — plugin + Core + shader data
+.\scripts\deploy-bepinex.ps1
 ```
 
 Manual build:
 
 ```powershell
-dotnet build NOLoader.LidarWireframeContour\NOLoader.LidarWireframeContour.csproj -c Release
 .\scripts\build-shader-bundle.ps1
+dotnet build NOLidarWireframeContour.sln -c Release
 ```
 
-**Close Nuclear Option** before deploy (PatchTool needs unlocked `Managed\*.dll`).
+**Close Nuclear Option** before NOLoader deploy (PatchTool needs unlocked `Managed\*.dll`).
 
-Deploy target: `Nuclear Option\NOLoader\mods\LidarWireframeContour\`
+| Artifact | Deploy target |
+|----------|---------------|
+| NOLoader mod | `Nuclear Option\NOLoader\mods\LidarWireframeContour\` |
+| BepInEx plugin | `Nuclear Option\BepInEx\plugins\` |
 
 ---
 
@@ -92,6 +124,15 @@ See [NOLidarWireframeContour_Data/BUILD_SHADER_BUNDLE.md](NOLidarWireframeContou
 ---
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    Core[NOLidarWireframeContour.Core]
+    NOLoader[NOLoader.LidarWireframeContour]
+    BepInEx[BepInEx.LidarWireframeContour]
+    NOLoader --> Core
+    BepInEx --> Core
+```
 
 ```mermaid
 flowchart TD
@@ -132,7 +173,10 @@ flowchart TD
 
 | File | Purpose |
 |------|---------|
+| `NOLidarWireframeContour.Core` | Shared runtime — probe, URP, gates, config snapshot |
 | `LidarWireframeMod` | NOLoader entry · `INOModTickNormal` |
+| `LidarWireframeBepInPlugin` | BepInEx entry · Harmony · `LidarWireframeHost` tick |
+| `LidarWireframeBepInConfig` | BepInEx CM bindings → `LidarConfig.ApplySnapshot` |
 | `ACT_LidarCollisionController` | Probe, TTI gate, hold, uniform targets |
 | `LidarPostProcess` | URP hook · GPU gate · depth policy |
 | `LidarDepthCapturePass` | Depth + edge precompute |
@@ -143,7 +187,9 @@ flowchart TD
 
 ## Configuration
 
-Edit `mod_config.ini` in the mod folder (hot-reload ~1 s).
+**NOLoader:** edit `mod_config.ini` in the mod folder (hot-reload ~1 s).
+
+**BepInEx:** press **F1** (Configuration Manager). Changes apply immediately via `SettingChanged`.
 
 ### Core
 
@@ -210,7 +256,7 @@ Edit `mod_config.ini` in the mod folder (hot-reload ~1 s).
 
 | Step | Settings | Expected |
 |------|----------|----------|
-| 1 | default | Log: `[LidarWireframe] 0.3.3V loaded`, `gpu:true`, `bundleBytes>15000` |
+| 1 | default | Log: `[LidarWireframe] 0.3.5V loaded`, `gpu:true`, `bundleBytes>15000` |
 | 2 | `DebugForceBlend=1`, `DebugShaderMode=5` | Full green screen |
 | 3 | `DebugShaderMode=6` | White terrain lines |
 | 4 | `DebugShaderMode=4` | Grayscale depth |
@@ -223,8 +269,8 @@ Edit `mod_config.ini` in the mod folder (hot-reload ~1 s).
 
 | Context | Format | Example |
 |---------|--------|---------|
-| `mod.json`, assembly, GitHub **release tag** | numeric semver | `0.3.3` |
-| Logs, `DisplayVersion`, CHANGELOG | semver + suffix | `0.3.3V` |
+| `mod.json`, assembly, GitHub **release tag**, `[BepInPlugin]` | numeric semver | `0.3.5` |
+| Logs, `DisplayVersion`, CHANGELOG | semver + suffix | `0.3.5V` |
 
 Suffix letters: **V** visual · **M** mechanic · **P** program · **A** audio · **Q** QoL · **O** other.  
 `Q` + `M` must not appear in the same version string.
@@ -233,7 +279,7 @@ Suffix letters: **V** visual · **M** mechanic · **P** program · **A** audio �
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full history (`0.1.0` legacy DEV builds → `0.3.3V`).
+See [CHANGELOG.md](CHANGELOG.md) for full history (`0.1.0` legacy DEV builds → `0.3.5V`).
 
 ---
 
@@ -241,7 +287,8 @@ See [CHANGELOG.md](CHANGELOG.md) for full history (`0.1.0` legacy DEV builds →
 
 | Project | Relation |
 |---------|----------|
-| [NOLoader](https://github.com/Mursisru/NOLoader) | Required loader |
+| [NOLoader](https://github.com/Mursisru/NOLoader) | NOLoader install path |
+| [BepInEx](https://docs.bepinex.dev/) | Alternative loader (this repo) |
 | [NOAviationCareerTracker](https://github.com/at747/NOAviationCareerTracker) | ACT naming only — no hard dependency |
 | [TerrainSilhouetteHud](https://github.com/at747/TerrainSilhouetteHud_Engine) | Alternative HUD — do not run both for same role |
 

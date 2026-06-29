@@ -2,5 +2,8 @@
   <Import Project="Directory.Build.user.props" Condition="Exists('Directory.Build.user.props')" />
   <PropertyGroup>
     <NuclearOptionRoot Condition="'$(NuclearOptionRoot)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</NuclearOptionRoot>
+    <BepInExLibs Condition="'$(BepInExLibs)' == '' and Exists('$(NuclearOptionRoot)\BepInEx\core\BepInEx.dll')">$(NuclearOptionRoot)\BepInEx\core</BepInExLibs>
+    <BepInExLibs Condition="'$(BepInExLibs)' == '' and Exists('C:\Users\at747\Desktop\.dll\BepInEx\core\BepInEx.dll')">C:\Users\at747\Desktop\.dll\BepInEx\core</BepInExLibs>
+    <BepInExLibs Condition="'$(BepInExLibs)' == '' and Exists('C:\Users\at747\Desktop\GITHUB local\MissileCamera\libs\BepInEx\core\BepInEx.dll')">C:\Users\at747\Desktop\GITHUB local\MissileCamera\libs\BepInEx\core</BepInExLibs>
   </PropertyGroup>
 </Project>

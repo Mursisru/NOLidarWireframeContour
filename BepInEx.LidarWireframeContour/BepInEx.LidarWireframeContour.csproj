@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LidarWireframeContour.BepInEx</RootNamespace>
+    <AssemblyName>BepInEx.LidarWireframeContour</AssemblyName>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NOLidarWireframeContour.Core\NOLidarWireframeContour.Core.csproj" />
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExLibs)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExLibs)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(NuclearOptionRoot)\NuclearOption_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mirage">
+      <HintPath>$(NuclearOptionRoot)\NuclearOption_Data\Managed\Mirage.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(NuclearOptionRoot)\NuclearOption_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(NuclearOptionRoot)\NuclearOption_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="CopyModData" AfterTargets="Build">
+    <PropertyGroup>
+      <_BundleSrc>$(MSBuildProjectDirectory)\..\NOLidarWireframeContour_Data\lidar_shaders</_BundleSrc>
+      <_HashSrc>$(MSBuildProjectDirectory)\..\NOLidarWireframeContour_Data\shader_source_hash.txt</_HashSrc>
+    </PropertyGroup>
+    <MakeDir Directories="$(TargetDir)NOLidarWireframeContour_Data" Condition="Exists('$(_BundleSrc)')" />
+    <Copy SourceFiles="$(_BundleSrc)" DestinationFiles="$(TargetDir)NOLidarWireframeContour_Data\lidar_shaders" SkipUnchangedFiles="true" Condition="Exists('$(_BundleSrc)')" />
+    <Copy SourceFiles="$(_HashSrc)" DestinationFiles="$(TargetDir)NOLidarWireframeContour_Data\shader_source_hash.txt" SkipUnchangedFiles="true" Condition="Exists('$(_HashSrc)')" />
+  </Target>
+</Project>

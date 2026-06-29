@@ -3,7 +3,7 @@ namespace NOLoader.LidarWireframeContour
     public static class AppVersion
     {
         /// <summary>Numeric semver only — mod.json, assembly, loaders.</summary>
-        public const string Semver = "0.3.3";
+        public const string Semver = "0.3.5";
 
         /// <summary>Type suffix: V=visual/client-only (no MP mechanic impact).</summary>
         public const string Suffix = "V";

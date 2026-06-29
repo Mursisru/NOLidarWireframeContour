@@ -14,6 +14,7 @@ namespace NOLoader.LidarWireframeContour
         {
             try
             {
+                LidarIniConfigLoader.Register();
                 LidarPostProcess.SetModRoot(ctx.ModRoot);
                 LidarConfig.Load(ctx.ModRoot);
                 LidarDebugLog.ClearOnModLoad();
