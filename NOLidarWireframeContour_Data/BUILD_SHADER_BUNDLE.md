@@ -37,7 +37,7 @@ The script:
 After deploy, game log should include:
 
 ```
-[LidarWireframe] 0.3.1V loaded (stage=Mission, gpu=True)
+[LidarWireframe] 0.3.6V loaded (stage=Mission, gpu=True)
 ```
 
 With `DebugLogVerbose=true`, `mod_loaded` reports `bundleBytes`, `edgeShader`, `compositeSupported`, `shaderHash`.

@@ -3,8 +3,17 @@
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).  
-**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (`0.3.4`).  
+**Releases:** [GitHub Releases](https://github.com/Mursisru/NOLidarWireframeContour/releases) use numeric semver (e.g. `0.3.6`).  
 **Display versions** in logs use suffix **`V`** only (visual / client-side; no MP mechanic flag).
+
+## [0.3.6V] — 2026-06-27
+
+### Documentation
+
+- Full documentation refresh: `docs/INSTALL.md`, `docs/ARCHITECTURE.md`, `docs/CONFIGURATION.md`, `docs/TROUBLESHOOTING.md`
+- README: table of contents, loader comparison, repo layout, corrected BepInEx tick description
+- Release install guide and troubleshooting (BepInEx host `Update`, dual-loader, bundle size)
+- CM section map for all 43 configuration keys
 
 ## [0.3.5V] — 2026-06-27
 

@@ -12,3 +12,4 @@ UnityBundleBuilder/build-bundle-tail.log
 deploy/
 debug-*.log
 .cursorrules
+release/
