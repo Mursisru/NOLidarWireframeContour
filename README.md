@@ -9,17 +9,6 @@
 [![.NET](https://img.shields.io/badge/.NET-4.8-purple.svg)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-GPU lidar terrain wireframe for **[Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/)** — velocity-aligned collision cone, TTI-driven activation, URP post-process compositing.
-
-**Pick one loader** — NOLoader **or** BepInEx. Do not install both (double URP hook).
-
-| Loader | Install path | Configuration |
-|--------|--------------|---------------|
-| **[NOLoader](https://github.com/Mursisru/NOLoader)** | `NOLoader\mods\LidarWireframeContour\` | `mod_config.ini` (hot-reload) |
-| **BepInEx 5** + [Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) | `BepInEx\plugins\` | **F1** in-game |
-
-> **Versions:** logs show `0.3.6V` · assemblies / `mod.json` / `[BepInPlugin]` use semver **`0.3.6`**
-
 ---
 
 ## Critical warnings
@@ -50,6 +39,17 @@ GPU lidar terrain wireframe for **[Nuclear Option](https://store.steampowered.co
 
 > [!TIP]
 > **Force-night override:** press **Y** (still requires TTI <= 7 s toward terrain).
+
+GPU lidar terrain wireframe for **[Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/)** — velocity-aligned collision cone, TTI-driven activation, URP post-process compositing.
+
+**Pick one loader** — NOLoader **or** BepInEx. Do not install both (double URP hook).
+
+| Loader | Install path | Configuration |
+|--------|--------------|---------------|
+| **[NOLoader](https://github.com/Mursisru/NOLoader)** | `NOLoader\mods\LidarWireframeContour\` | `mod_config.ini` (hot-reload) |
+| **BepInEx 5** + [Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) | `BepInEx\plugins\` | **F1** in-game |
+
+> **Versions:** logs show `0.3.6V` · assemblies / `mod.json` / `[BepInPlugin]` use semver **`0.3.6`**
 
 ## Table of contents
 
