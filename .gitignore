@@ -13,3 +13,10 @@ deploy/
 debug-*.log
 .cursorrules
 release/
+libs/
+Directory.Build.props
+.cursor/
+ffmpeg.exe
+local_build_scripts/
+_buildroot/
+.debug/

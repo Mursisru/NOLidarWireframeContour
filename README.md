@@ -1,3 +1,5 @@
+**Developer:** Mursisru
+
 # Lidar Wireframe Contour
 
 [![Version](https://img.shields.io/badge/version-0.3.6V-blue.svg)](CHANGELOG.md)
@@ -212,3 +214,9 @@ See **[CHANGELOG.md](CHANGELOG.md)** — `0.1.0` legacy DEV builds → **`0.3.6V
 ## Author
 
 **[Mursisru](https://github.com/Mursisru)** — Nuclear Option modding
+
+---
+
+## Keywords
+
+nuclear-option, noloader, mod, nolidarwireframecontour, csharp, unity
