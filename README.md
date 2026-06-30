@@ -22,8 +22,38 @@ GPU lidar terrain wireframe for **[Nuclear Option](https://store.steampowered.co
 
 ---
 
+## Critical warnings
+
+> [!CAUTION]
+> **Never install NOLoader and BepInEx builds together** - double URP post-process hook will break or duplicate the wireframe effect.
+
+> [!IMPORTANT]
+> **Pick one loader** - NOLoader path **or** BepInEx 5 + Configuration Manager; do not mix payloads in one game folder.
+
+> [!IMPORTANT]
+> **Close the game before NOLoader deploy** - PatchTool needs unlocked `Managed\*.dll`.
+
+> [!IMPORTANT]
+> **Ship Core DLL and shader data** - both `NOLidarWireframeContour.Core.dll` and `NOLidarWireframeContour_Data/lidar_shaders` are required; plugin-only install fails (`gpu=False`).
+
+> [!WARNING]
+> **`lidar_shaders` bundle must be valid (>= 15 KB)** - stale or missing bundle causes `gpu=False` and no wireframe.
+
+> [!WARNING]
+> **Mission stage only** - mod `loadStage` is `Mission`; no probe chain in main menu.
+
+> [!WARNING]
+> **BepInEx builds <= 0.3.4 may load but never tick** - use **0.3.5V+** with `LidarWireframeHost` on a `DontDestroyOnLoad` GameObject.
+
+> [!NOTE]
+> **Do not run alongside TerrainSilhouetteHud for the same role** - pick one terrain-warning approach.
+
+> [!TIP]
+> **Force-night override:** press **Y** (still requires TTI <= 7 s toward terrain).
+
 ## Table of contents
 
+- [Critical warnings](#critical-warnings)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Quick install](#quick-install)
